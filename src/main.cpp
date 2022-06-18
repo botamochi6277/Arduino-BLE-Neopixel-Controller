@@ -23,11 +23,6 @@ BLEService ledService("19B10000-E8F2-537E-4F6C-D104768A1214"); // BLE LED Servic
 // BLE LED Switch Characteristic - custom 128-bit UUID, read and writable by central
 BLEByteCharacteristic switchCharacteristic("19B10001-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite);
 
-void colorWipe(Adafruit_NeoPixel &strip, uint32_t color, int wait);
-void theaterChase(Adafruit_NeoPixel &strip, uint32_t color, int wait);
-void rainbow(Adafruit_NeoPixel &strip, int wait);
-void theaterChaseRainbow(Adafruit_NeoPixel &strip, int wait);
-
 void setup()
 {
   Serial.begin(115200);
@@ -97,6 +92,9 @@ void loop()
       {
         switch (switchCharacteristic.value())
         {
+        case 0x00:
+          colorWipe(pixels, pixels.Color(0, 0, 0), 20); // Clear
+          break;
         case 0x0a:
           colorWipe(pixels, pixels.Color(255, 0, 0), 20); // Red
           break;
@@ -116,7 +114,7 @@ void loop()
           theaterChase(pixels, pixels.Color(255, 0, 255), 20); // Cyan
           break;
         case 0x01:
-          rainbow(pixels, 10);
+          rainbow(pixels, 5);
           break;
         case 0x02:
           theaterChaseRainbow(pixels, 20);
