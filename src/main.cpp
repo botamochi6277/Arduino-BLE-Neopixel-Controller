@@ -119,6 +119,10 @@ void loop()
         case 0x02:
           theaterChaseRainbow(pixels, 20);
           break;
+        case 0x03:
+          // flame?
+          rainbow(pixels, 5, 0, 16384);
+          break;
         }
       }
     }
