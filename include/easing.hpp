@@ -5,12 +5,22 @@
 // https://easings.net
 namespace easing
 {
+
+    const short LINEAR = 0;
+    const short SINE = 1;
+
     template <typename T>
     T remap(T x, T in_min, T in_max, T out_min, T out_max)
     {
         return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
     }
-
+    /**
+     * @brief linear easing
+     *
+     * @param frame
+     * @param duration
+     * @return int 0--255
+     */
     int linear(int frame, int duration = 255)
     {
         if (frame < 0)
