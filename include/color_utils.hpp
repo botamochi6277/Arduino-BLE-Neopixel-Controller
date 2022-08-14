@@ -20,12 +20,12 @@ unsigned int colorEasing(
     unsigned char rf, gf, bf, wf;
     colorToInt(from, rf, gf, bf, wf);
     unsigned char rt, gt, bt, wt;
-    colorToInt(from, rt, gt, bt, wt);
+    colorToInt(to, rt, gt, bt, wt);
 
     unsigned int color;
     unsigned char ri, gi, bi, wi;
 
-    int w = 0; // weight
+    unsigned char w = 0; // weight, 0--255
     switch (ease)
     {
     case easing::LINEAR:
@@ -53,7 +53,7 @@ void wipeUpdate(
     // unsigned int num_seq = num_pixels + 1;
     for (size_t i = 0; i < num_pixels; i++)
     {
-        if ((progress < i) == forward)
+        if (progress < i)
         {
             colors[i] = from[i];
         }
@@ -64,9 +64,9 @@ void wipeUpdate(
     }
 }
 
-void dissolve(unsigned int colors[], unsigned int from[], unsigned int to[],
-              unsigned int num_pixels, unsigned int progress,
-              unsigned int duration)
+void dissolveUpdate(unsigned int colors[], unsigned int from[], unsigned int to[],
+                    unsigned int num_pixels, unsigned int progress,
+                    unsigned int duration)
 {
     // float w = progress / num_pixels;
     for (size_t i = 0; i < num_pixels; i++)
@@ -77,8 +77,8 @@ void dissolve(unsigned int colors[], unsigned int from[], unsigned int to[],
     }
 }
 
-void slide(unsigned int colors[], unsigned int from[], unsigned int to[],
-           unsigned int num_pixels, unsigned int progress)
+void slideUpdate(unsigned int colors[], unsigned int from[], unsigned int to[],
+                 unsigned int num_pixels, unsigned int progress)
 {
     for (size_t i = 0; i < num_pixels; i++)
     {
