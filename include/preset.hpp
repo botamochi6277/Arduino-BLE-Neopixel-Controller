@@ -23,19 +23,32 @@
 #define PALETTE_WARNING 0xffa726
 #define PALETTE_INFO 0x29b6f6
 #define PALETTE_SUCCESS 0x66bb6a
+
+// https://coolors.co/fb5607-ffbe0b-99ff40-4ec778-39ede4-3a86ff-8338ec-eb52bd-ff006e
 #define PALETTE_LIGHT 0xffffff
-#define PALETTE_DARK 0x2b2b2b
+
+#define PALETTE_ORANGE 0xFB5607  // h 019
+#define PALETTE_YELLOW 0xFFBE0B  // h 044
+#define PALETTE_LIME 0x99FF40    // h 092
+#define PALETTE_GREEN 0x44AF69   // h 141
+#define PALETTE_AQUA 0x39EDE4    // h 177
+#define PALETTE_BLUE 0x3A86FF    // h 217
+#define PALETTE_VIOLET 0x8338EC  // h 265
+#define PALETTE_MAGENTA 0xEB52BD // h 318
+#define PALETTE_RED 0xFF006E     // h 334
 
 const unsigned int PALETTE[] = {
-    0,
-    PALETTE_PRIMARY,
-    PALETTE_SECONDARY,
-    PALETTE_ERROR,
-    PALETTE_WARNING,
-    PALETTE_INFO,
-    PALETTE_SUCCESS,
-    PALETTE_LIGHT,
-    PALETTE_DARK,
+    0,               // 0
+    PALETTE_LIGHT,   // 1
+    PALETTE_ORANGE,  // 2
+    PALETTE_YELLOW,  // 3
+    PALETTE_LIME,    // 4
+    PALETTE_GREEN,   // 5
+    PALETTE_AQUA,    // 6
+    PALETTE_BLUE,    // 7
+    PALETTE_VIOLET,  // 8
+    PALETTE_MAGENTA, // 9
+    PALETTE_RED      // A
 };
 
 #endif
