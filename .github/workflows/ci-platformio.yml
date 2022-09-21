@@ -28,11 +28,11 @@ jobs:
           pip install --upgrade platformio
       - name: Install XIAO BLE
         run: |
-        pio platform install nordicnrf52
-        curl -OL https://gist.githubusercontent.com/alwint3r/63594345ca86a81a810ca7bcaeae23d9/raw/9aaf34cec27683395bc3e62296769cd7fdb6b1e8/xiaoblesense.json
-        ls ~/.platformio
-        mv  xiaoblesense.json ~/.platformio/platforms/nordicnrf52/boards
-        sed 's/"nicla_sense_me"/ "nicla_sense_me", "xiaoblesense"/g' .platformio/platforms/nordicnrf52/platform.py 
+          pio platform install nordicnrf52
+          curl -OL https://gist.githubusercontent.com/alwint3r/63594345ca86a81a810ca7bcaeae23d9/raw/9aaf34cec27683395bc3e62296769cd7fdb6b1e8/xiaoblesense.json
+          ls ~/.platformio
+          mv  xiaoblesense.json ~/.platformio/platforms/nordicnrf52/boards
+          sed 's/"nicla_sense_me"/ "nicla_sense_me", "xiaoblesense"/g' .platformio/platforms/nordicnrf52/platform.py
       - name: Install library dependencies
         run: pio lib -g install 1
       - name: Run PlatformIO
