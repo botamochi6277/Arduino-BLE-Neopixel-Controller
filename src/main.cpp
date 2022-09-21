@@ -11,7 +11,7 @@
 #include "color_utils.hpp"
 #include "preset.hpp"
 // Neopixel veriables
-#define PIXEL_PIN 10 // MOSI
+#define PIXEL_PIN 7 // MOSI
 #define NUM_PIXELS 45
 #define DELAYVAL 500
 
@@ -20,12 +20,13 @@
 char message[128]; // buffer for sprintf
 
 // mode:
-//      act   color2 color1
-// 0x | 00  | 0     |  0
+//    act_opt act color2 color1
+// 0x | 0  | 0  | 0     |  0
 unsigned short mode = 0x0000;
 unsigned int progress = 0;
 bool completed = false;
 unsigned char act;
+unsigned char backward;
 unsigned int current_colors[NUM_PIXELS];
 unsigned int start_colors[NUM_PIXELS];
 unsigned int goal_colors[NUM_PIXELS];
@@ -89,7 +90,7 @@ void setup()
 
 void loop()
 {
-  digitalWrite(LEDB, !digitalRead(LEDB));
+  digitalWrite(LEDB, !digitalRead(LEDB)); // waiting for connection
 
   BLEDevice central = BLE.central();
 
@@ -113,9 +114,11 @@ void loop()
         sprintf(message, "Recieve new value: 0x%04x", mode);
         Serial.println(message);
 
-        act = mode >> 8;
-        sprintf(message, "Action: 0x%02x", act);
+        act = (0x0f00 & mode) >> 8;
+        sprintf(message, "Action: 0x%01x", act);
         Serial.println(message);
+
+        backward = (0xf000 & mode) >> 12;
 
         unsigned char color_code1 = mode & 0x0F;
         unsigned char color_code2 = (mode & 0xF0) >> 4;

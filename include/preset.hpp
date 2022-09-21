@@ -11,9 +11,15 @@
 #define PRESET_LIGHT 0x7
 #define PRESET_DARK 0x8
 
+// action code
 #define PRESET_ACT_WIPE 0x1
 #define PRESET_ACT_SLIDE 0x2
-#define PRESET_ACT_DISSOLVE 0x03
+#define PRESET_ACT_DISSOLVE 0x3
+
+// action option
+#define PRESET_OPT_DIS 0x01     // with dissolve
+#define PRESET_OPT_INV 0x02     // inverse (backward)
+#define PRESET_OPT_DIS_INV 0x03 // inverse with dissolve
 
 // Standard Palette
 // https://mui.com/material-ui/customization/palette/

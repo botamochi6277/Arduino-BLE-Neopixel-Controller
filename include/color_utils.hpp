@@ -4,23 +4,23 @@
 #include <Arduino.h>
 #include "easing.hpp"
 
-void colorToInt(unsigned int c, unsigned char &r, unsigned char &g, unsigned char &b, unsigned char &w)
+void colorToHex(unsigned int c, unsigned char &r, unsigned char &g, unsigned char &b, unsigned char &w)
 {
-    w = c >> 24;
-    r = c >> 16;
-    g = c >> 8;
-    b = c;
+    // 0x FF 00 FF 00
+    w = (0xFF000000 & c) >> 24;
+    r = (0x00FF0000 & c) >> 16;
+    g = (0x0000FF00 & c) >> 8;
+    b = (0x000000FF & c);
 }
 
 unsigned int colorEasing(
     unsigned int from, unsigned int to,
     int frame, int duration, short ease = easing::LINEAR)
 {
-
     unsigned char rf, gf, bf, wf;
-    colorToInt(from, rf, gf, bf, wf);
+    colorToHex(from, rf, gf, bf, wf);
     unsigned char rt, gt, bt, wt;
-    colorToInt(to, rt, gt, bt, wt);
+    colorToHex(to, rt, gt, bt, wt);
 
     unsigned int color;
     unsigned char ri, gi, bi, wi;
@@ -46,14 +46,23 @@ unsigned int colorEasing(
     return color;
 }
 
-void wipeUpdate(
+bool wipeUpdate(
     unsigned int colors[], unsigned int from[], unsigned int to[],
     unsigned int num_pixels, unsigned int progress, bool forward = true)
 {
-    // unsigned int num_seq = num_pixels + 1;
     for (size_t i = 0; i < num_pixels; i++)
     {
-        if (progress < i)
+        bool b;
+        if (forward)
+        {
+            b = progress - 1 < i;
+        }
+        else
+        {
+            b = num_pixels - progress;
+        }
+
+        if (b)
         {
             colors[i] = from[i];
         }
@@ -62,6 +71,8 @@ void wipeUpdate(
             colors[i] = to[i];
         }
     }
+
+    return progress >= num_pixels;
 }
 
 void dissolveUpdate(unsigned int colors[], unsigned int from[], unsigned int to[],
@@ -77,43 +88,77 @@ void dissolveUpdate(unsigned int colors[], unsigned int from[], unsigned int to[
     }
 }
 
-void slideUpdate(unsigned int colors[], unsigned int from[], unsigned int to[],
-                 unsigned int num_pixels, unsigned int progress)
+bool slideUpdate(unsigned int colors[], unsigned int from[], unsigned int to[],
+                 unsigned int num_pixels, unsigned int progress, bool forward = true)
 {
+    int head;
+    int tail;
+    bool b;
     for (size_t i = 0; i < num_pixels; i++)
     {
-        if (progress <= i)
+        head = progress - 1;
+        tail = head - num_pixels + 1;
+        if (forward)
+        {
+            b = head < i;
+        }
+        else
+        {
+            b = i < tail;
+        }
+
+        if (b)
         {
             colors[i] = from[i];
         }
         else
         {
-            unsigned int j = num_pixels - progress + i;
-            if (num_pixels <= j)
+            if (forward)
             {
-                j = num_pixels - 1;
+                colors[i] = to[num_pixels - (head - i) - 1];
             }
-
-            colors[i] = to[num_pixels - progress + i];
+            else
+            {
+                colors[i] = to[i - tail];
+            }
         }
     }
+
+    return progress >= num_pixels;
 }
 
-void wipe_dissolve(
+bool wipe_dissolve(
     unsigned int colors[], unsigned int from[], unsigned int to[],
-    unsigned int num_pixels, unsigned int progress, unsigned int num_dissolve = 3)
+    unsigned int num_pixels, unsigned int progress, unsigned int num_dissolve = 3, bool forward = true)
 {
-
+    bool b;
     // num_seq = num_pixels + num_dissolve
     for (size_t i = 0; i < num_pixels; i++)
     {
-        if (progress < i + 1)
+        if (forward)
+        {
+            b = progress < i + 1;
+        }
+        else
+        {
+            b = num_pixels - progress - 1;
+        }
+
+        if (b)
         {
             colors[i] = from[i];
         }
         else
         {
-            int k = progress - i;
+            int k = 0;
+            if (forward)
+            {
+                k = progress - i;
+            }
+            else
+            {
+                k = i - (num_pixels - progress - 1);
+            }
             int w = 255 * k / num_dissolve;
 
             if (w >= 255)
@@ -126,6 +171,8 @@ void wipe_dissolve(
             }
         }
     }
+
+    return progress >= num_pixels + num_dissolve - 1;
 }
 
 void slide_dissolve(
