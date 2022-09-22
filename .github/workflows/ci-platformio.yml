@@ -38,6 +38,7 @@ jobs:
           curl -OL https://gist.githubusercontent.com/botamochi6277/9758fb94483f7cdf28639f9c80902674/raw/505fa2bad210ab288afb5de5a7396f66b9fc1b27/platform.py
           mv platform.py ~/.platformio/platforms/nordicnrf52/platform.py
       - run: ls ~/.platformio/packages/framework-arduino-mbed
+      - run: ls ~/.platformio/packages/framework-arduino-mbed/variants/SEEED_XIAO_NRF52840_SENSE/
       - name: Install library dependencies
         run: pio lib -g install 1
       - name: Run PlatformIO
