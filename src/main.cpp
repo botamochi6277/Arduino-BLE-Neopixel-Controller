@@ -28,7 +28,7 @@ unsigned short mode = 0x0000;
 unsigned int progress = 0;
 bool completed = false;  // flag for color transition
 unsigned char act;
-unsigned char backward;
+bool backward;
 unsigned int current_colors[NUM_PIXELS];
 unsigned int start_colors[NUM_PIXELS];
 unsigned int goal_colors[NUM_PIXELS];
@@ -43,10 +43,15 @@ LSM6DS3 my_imu(I2C_MODE, 0x6A);  // I2C device address 0x6A
 BLEService ledService(
     "19B10000-E8F2-537E-4F6C-D104768A1214");  // BLE LED Service
 
+BLEUnsignedLongCharacteristic timer_characteristic(
+    "19B10001-E8F2-537E-4F6C-D104768A1214", BLERead | BLENotify);
+//  Characteristic User Description Descriptor
+BLEDescriptor timer_descriptor("2901", "timer_ms");
+
 // BLE LED Switch Characteristic - custom 128-bit UUID, read and writable by
-// central
 BLEUnsignedShortCharacteristic switchCharacteristic(
-    "19B10001-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite);
+    "19B10002-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite);
+BLEDescriptor led_descriptor("2901", "action_color");
 
 void setup() {
   Serial.begin(115200);
@@ -88,13 +93,38 @@ void setup() {
   // start advertising
   BLE.advertise();
 
-  pinMode(LEDB, OUTPUT);  // for ble heartbeat
+  // build-in leds
+  pinMode(LEDR, OUTPUT);
+  pinMode(LEDG, OUTPUT);
+  pinMode(LEDB, OUTPUT);
+  // turn off the all build-in leds
+  digitalWrite(LEDR, HIGH);
+  digitalWrite(LEDG, HIGH);
+  digitalWrite(LEDB, HIGH);
+
   pinMode(PIXEL_PIN, OUTPUT);
   digitalWrite(PIXEL_PIN, LOW);
   pixels.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
   pixels.show();   // Turn OFF all pixels ASAP
 
-  colorWipe(pixels, pixels.Color(0, 200, 200), 20);  // Wakeup lighting
+  for (size_t i = 0; i < NUM_PIXELS; i++) {
+    start_colors[i] = current_colors[i];
+  }
+  gradient_color(goal_colors, NUM_PIXELS, PALETTE_INFO, PALETTE_LIME);
+  unsigned int duration = 10;
+  for (size_t i = 0; i < duration; i++) {
+    dissolveUpdate(current_colors, start_colors, goal_colors, NUM_PIXELS,
+                   progress, duration);
+    for (int i = 0; i < pixels.numPixels(); i++) {
+      // uint32_t c = current_colors[i];
+      pixels.setPixelColor(i, (uint32_t)current_colors[i]);
+    }
+    progress += 1;
+    pixels.show();
+    delay(DELAY_LED);
+  }
+  progress = 0;
+  completed = true;
 }
 
 void loop() {
@@ -104,6 +134,8 @@ void loop() {
 
   // if a central is connected to peripheral:
   if (central) {
+    digitalWrite(LEDB, HIGH);
+    digitalWrite(LEDG, LOW);
     // print the central's MAC address:
     sprintf(message, "Connected to central: %s", central.address().c_str());
     Serial.println(message);
@@ -123,7 +155,7 @@ void loop() {
         sprintf(message, "Action: 0x%01x", act);
         Serial.println(message);
 
-        backward = (0xf000 & mode) >> 12;
+        backward = ((0xf000 & mode) >> 12) > 0;
 
         unsigned char color_code1 = mode & 0x0F;
         unsigned char color_code2 = (mode & 0xF0) >> 4;
@@ -134,8 +166,6 @@ void loop() {
         gradient_color(goal_colors, NUM_PIXELS, PALETTE[color_code1],
                        PALETTE[color_code2]);
 
-        // memcpy(start_colors, current_colors, sizeof(current_colors));
-
         for (size_t i = 0; i < NUM_PIXELS; i++) {
           start_colors[i] = current_colors[i];
         }
@@ -144,27 +174,24 @@ void loop() {
       // led strip update
       if (completed == false) {
         unsigned short duration = 30;
+
         switch (act) {
           case PRESET_ACT_WIPE:
-            wipeUpdate(current_colors, start_colors, goal_colors, NUM_PIXELS,
-                       progress, false);
-            // complete check
-            completed = (progress == (NUM_PIXELS - 1));
+            completed = wipeUpdate(current_colors, start_colors, goal_colors,
+                                   NUM_PIXELS, progress, !backward);
             // progress ratio = progress / (NUM_PIXELS - 1)
             break;
 
           case PRESET_ACT_SLIDE:
-            slideUpdate(current_colors, start_colors, goal_colors, NUM_PIXELS,
-                        progress);
-            completed = (progress == NUM_PIXELS);
+            completed = slideUpdate(current_colors, start_colors, goal_colors,
+                                    NUM_PIXELS, progress);
             break;
 
           case PRESET_ACT_DISSOLVE:
 
-            dissolveUpdate(current_colors, start_colors, goal_colors,
-                           NUM_PIXELS, progress, duration);
-            completed = (progress == duration);
-
+            completed =
+                dissolveUpdate(current_colors, start_colors, goal_colors,
+                               NUM_PIXELS, progress, duration);
             break;
           case PRESET_ACT_ACC:
             // imu acc
@@ -174,9 +201,9 @@ void loop() {
 
             duration = 10;
 
-            unsigned int cx = abs(x / 2.0f);
-            unsigned int cy = abs(y / 2.0f);
-            unsigned int cz = abs(z / 2.0f);
+            unsigned int cx = 255 * abs(x / 2.0f);
+            unsigned int cy = 255 * abs(y / 2.0f);
+            unsigned int cz = 255 * abs(z / 2.0f);
             u_int32_t cc = (cx << 16 | cy << 8 | cz);
 
             if (progress < duration) {
@@ -190,6 +217,7 @@ void loop() {
             break;
         }
 
+        // apply current color
         for (int i = 0; i < pixels.numPixels(); i++) {
           uint32_t c = current_colors[i];
           pixels.setPixelColor(i, c);
@@ -199,7 +227,7 @@ void loop() {
         progress += 1;
 
         if (completed) {
-          sprintf(message, "0x%04x completed", mode);
+          sprintf(message, "0x%04x completed (%04d frames)", mode, progress);
           Serial.println(message);
         }
       }
@@ -207,6 +235,7 @@ void loop() {
       delay(DELAY_LED);
     }
     Serial.println("Disconnection");
+    digitalWrite(LEDG, HIGH);
   }
 
   delay(DELAY_MS);
