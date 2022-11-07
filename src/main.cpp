@@ -40,7 +40,7 @@ LSM6DS3 my_imu(I2C_MODE, 0x6A);  // I2C device address 0x6A
 
 // BLE Variables
 
-BLEService ledService(
+BLEService led_service(
     "19B10000-E8F2-537E-4F6C-D104768A1214");  // BLE LED Service
 
 BLEUnsignedLongCharacteristic timer_characteristic(
@@ -49,7 +49,7 @@ BLEUnsignedLongCharacteristic timer_characteristic(
 BLEDescriptor timer_descriptor("2901", "timer_ms");
 
 // BLE LED Switch Characteristic - custom 128-bit UUID, read and writable by
-BLEUnsignedShortCharacteristic switchCharacteristic(
+BLEUnsignedShortCharacteristic switch_characteristic(
     "19B10002-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite);
 BLEDescriptor led_descriptor("2901", "action_color");
 
@@ -79,16 +79,16 @@ void setup() {
   // set advertised local name and service UUID:
   BLE.setDeviceName("ArduinoNeopixels");
   BLE.setLocalName("Neopixels");
-  BLE.setAdvertisedService(ledService);
+  BLE.setAdvertisedService(led_service);
 
   // add the characteristic to the service
-  ledService.addCharacteristic(switchCharacteristic);
-
+  led_service.addCharacteristic(switch_characteristic);
+  switch_characteristic.addDescriptor(led_descriptor);
   // add service
-  BLE.addService(ledService);
+  BLE.addService(led_service);
 
   // set the initial value for the characteristic:
-  switchCharacteristic.writeValue(0x0111);
+  switch_characteristic.writeValue(0x0111);
 
   // start advertising
   BLE.advertise();
@@ -110,7 +110,7 @@ void setup() {
   for (size_t i = 0; i < NUM_PIXELS; i++) {
     start_colors[i] = current_colors[i];
   }
-  gradient_color(goal_colors, NUM_PIXELS, PALETTE_INFO, PALETTE_LIME);
+  gradientColor(goal_colors, NUM_PIXELS, PALETTE_INFO, PALETTE_LIME);
   unsigned int duration = 10;
   for (size_t i = 0; i < duration; i++) {
     dissolveUpdate(current_colors, start_colors, goal_colors, NUM_PIXELS,
@@ -144,10 +144,10 @@ void loop() {
     while (central.connected()) {
       // if the remote device wrote to the characteristic,
       // use the value to control the LED:
-      if (switchCharacteristic.written()) {
+      if (switch_characteristic.written()) {
         progress = 0;
         completed = false;
-        mode = switchCharacteristic.valueLE();
+        mode = switch_characteristic.valueLE();
         sprintf(message, "Receive new value: 0x%04x", mode);
         Serial.println(message);
 
@@ -163,8 +163,8 @@ void loop() {
         sprintf(message, "color: 0x%01x -- 0x%01x", color_code1, color_code2);
         Serial.println(message);
 
-        gradient_color(goal_colors, NUM_PIXELS, PALETTE[color_code1],
-                       PALETTE[color_code2]);
+        gradientColor(goal_colors, NUM_PIXELS, PALETTE[color_code1],
+                      PALETTE[color_code2]);
 
         for (size_t i = 0; i < NUM_PIXELS; i++) {
           start_colors[i] = current_colors[i];
@@ -174,27 +174,27 @@ void loop() {
       // led strip update
       if (completed == false) {
         unsigned short duration = 30;
+        u_int32_t cc = 0;
 
         switch (act) {
-          case PRESET_ACT_WIPE:
+          case PRESET_ACT_WIPE: {
             completed = wipeUpdate(current_colors, start_colors, goal_colors,
                                    NUM_PIXELS, progress, !backward);
             // progress ratio = progress / (NUM_PIXELS - 1)
-            break;
+          } break;
 
-          case PRESET_ACT_SLIDE:
+          case PRESET_ACT_SLIDE: {
             completed = slideUpdate(current_colors, start_colors, goal_colors,
                                     NUM_PIXELS, progress);
-            break;
+          } break;
 
-          case PRESET_ACT_DISSOLVE:
-
+          case PRESET_ACT_DISSOLVE: {
+            duration = 30;
             completed =
                 dissolveUpdate(current_colors, start_colors, goal_colors,
                                NUM_PIXELS, progress, duration);
-            break;
-          case PRESET_ACT_ACC:
-            // imu acc
+          } break;
+          case PRESET_ACT_ACC: {  // imu acc
             float x = my_imu.readFloatAccelX();
             float y = my_imu.readFloatAccelY();
             float z = my_imu.readFloatAccelZ();
@@ -204,16 +204,28 @@ void loop() {
             unsigned int cx = 255 * abs(x / 2.0f);
             unsigned int cy = 255 * abs(y / 2.0f);
             unsigned int cz = 255 * abs(z / 2.0f);
-            u_int32_t cc = (cx << 16 | cy << 8 | cz);
+            cc = (cx << 16 | cy << 8 | cz);
 
             if (progress < duration) {
-              gradient_color(goal_colors, NUM_PIXELS, cc, cc);
+              gradientColor(goal_colors, NUM_PIXELS, cc, cc);
               dissolveUpdate(current_colors, start_colors, goal_colors,
                              NUM_PIXELS, progress, duration);
             } else {
-              gradient_color(current_colors, NUM_PIXELS, cc, cc);
+              gradientColor(current_colors, NUM_PIXELS, cc, cc);
             }
+          }
 
+          break;
+
+          case PRESET_ACT_RAINBOW: {
+            duration = 30;
+            rainbowColor(goal_colors, NUM_PIXELS);
+            completed =
+                dissolveUpdate(current_colors, start_colors, goal_colors,
+                               NUM_PIXELS, progress, duration);
+          } break;
+
+          default:
             break;
         }
 

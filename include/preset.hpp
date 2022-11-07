@@ -16,6 +16,7 @@
 #define PRESET_ACT_SLIDE 0x2
 #define PRESET_ACT_DISSOLVE 0x3
 #define PRESET_ACT_ACC 0x4
+#define PRESET_ACT_RAINBOW 0x5
 
 // action option
 #define PRESET_OPT_DIS 0x01      // with dissolve

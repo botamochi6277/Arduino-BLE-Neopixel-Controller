@@ -5,8 +5,8 @@
 
 #include "easing.hpp"
 
-void colorToHex(unsigned int c, unsigned char &r, unsigned char &g,
-                unsigned char &b, unsigned char &w) {
+void hexToRgbw(unsigned int c, unsigned char &r, unsigned char &g,
+               unsigned char &b, unsigned char &w) {
   // 0x FF 00 FF 00
   w = (0xFF000000 & c) >> 24;
   r = (0x00FF0000 & c) >> 16;
@@ -14,12 +14,67 @@ void colorToHex(unsigned int c, unsigned char &r, unsigned char &g,
   b = (0x000000FF & c);
 }
 
+/**
+ * @brief hsv 2 hex-color
+ * @param H Hue, 0--255
+ * @param S Saturation, 0--255
+ * @param V Value, 0--255
+ */
+unsigned int hsvToHex(unsigned char h, unsigned char s, unsigned char v) {
+  unsigned char r = 0, g = 0, b = 0;
+  int hi;
+  float f;
+  unsigned char p, q, t;
+
+  // h 0--255,
+  hi = ((int)(h / 42.5f)) % 6;  // int 0--5
+  f = h / 42.5f - hi;           // 0.0--1.0
+  p = v * ((255 - s) / 255);
+  q = v * ((255 - f * s) / 255);
+  t = v * ((255 - (1.0 - f) * s) / 255);
+
+  switch (hi) {
+    case 0:
+      r = v;
+      g = t;
+      b = p;
+      break;
+    case 1:
+      r = q;
+      g = v;
+      b = p;
+      break;
+    case 2:
+      r = p;
+      g = v;
+      b = t;
+      break;
+    case 3:
+      r = p;
+      g = q;
+      b = v;
+      break;
+    case 4:
+      r = t;
+      g = p;
+      b = v;
+      break;
+    case 5:
+      r = v;
+      g = p;
+      b = q;
+      break;
+  }
+
+  return (r << 16 | g << 8 | b);
+}
+
 unsigned int colorEasing(unsigned int from, unsigned int to, int frame,
                          int duration, short ease = easing::LINEAR) {
   unsigned char rf, gf, bf, wf;
-  colorToHex(from, rf, gf, bf, wf);
+  hexToRgbw(from, rf, gf, bf, wf);
   unsigned char rt, gt, bt, wt;
-  colorToHex(to, rt, gt, bt, wt);
+  hexToRgbw(to, rt, gt, bt, wt);
 
   unsigned int color;
   unsigned char ri, gi, bi;
@@ -170,10 +225,20 @@ void slide_dissolve(unsigned int colors[], unsigned int from[],
  * @param left
  * @param right
  */
-void gradient_color(unsigned int colors[], size_t num_pixels, unsigned int left,
-                    unsigned int right) {
+void gradientColor(unsigned int colors[], size_t num_pixels, unsigned int left,
+                   unsigned int right) {
   for (size_t i = 0; i < num_pixels; i++) {
     colors[i] = colorEasing(left, right, i, num_pixels);
+  }
+}
+
+void rainbowColor(unsigned int colors[], size_t num_pixels,
+                  unsigned char s = 255, unsigned char v = 200) {
+  unsigned char hue = 0;
+
+  for (size_t i = 0; i < num_pixels; i++) {
+    hue = (255 * i) / num_pixels;
+    colors[i] = hsvToHex(hue, s, v);
   }
 }
 
