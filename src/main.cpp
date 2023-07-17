@@ -1,8 +1,8 @@
 // base code
 // https://github.com/adafruit/Adafruit_NeoPixel/blob/master/examples/StrandtestArduinoBLE/StrandtestArduinoBLE.ino
 
-//#include "FastLED.h" // FastLED unsupports nrf52 series
-// https://github.com/adafruit/Adafruit_NeoPixel
+// #include "FastLED.h" // FastLED unsupports nrf52 series
+//  https://github.com/adafruit/Adafruit_NeoPixel
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 #include <ArduinoBLE.h>
@@ -10,6 +10,7 @@
 #include "LSM6DS3.h"  // IMU chip
 #include "Wire.h"
 #include "color_utils.hpp"
+#include "neopixel_service.hpp"
 #include "preset.hpp"
 #include "strip.hpp"
 // Neopixel variables
@@ -20,6 +21,8 @@
 #define DELAY_LED 100
 
 char message[128];  // buffer for sprintf
+
+ble::NeopixelService pixel_srv;
 
 // mode:
 //    act_opt act color2 color1
@@ -74,10 +77,11 @@ void setup() {
   }
 
   Serial.print("Peripheral address: ");
-  Serial.println(BLE.address());
-
+  String ble_address = BLE.address();
+  Serial.println(ble_address);
+  String local_name = "ArduinoNeopixels" + ble_address;
   // set advertised local name and service UUID:
-  BLE.setDeviceName("ArduinoNeopixels");
+  BLE.setDeviceName(local_name.c_str());
   BLE.setLocalName("Neopixels");
   BLE.setAdvertisedService(led_service);
 
