@@ -19,13 +19,20 @@ class NeopixelService : public BLEService {
       0x01,
       0x00,
       0x00};
-  const uint8_t color_format_[7] = {BLE_GATT_CPF_FORMAT_UINT64,
+  const uint8_t color_format_[7] = {BLE_GATT_CPF_FORMAT_UINT32,
                                     0b0,  // exp
                                     (uint8_t)BLE_GATT_CPF_UNIT_UNITLESS,
                                     (uint8_t)(BLE_GATT_CPF_UNIT_UNITLESS >> 8),
                                     0x01,
                                     0x00,
                                     0x00};
+  const uint8_t cmd_format_[7] = {BLE_GATT_CPF_FORMAT_UINT8,
+                                  0b0,  // exp
+                                  (uint8_t)BLE_GATT_CPF_UNIT_UNITLESS,
+                                  (uint8_t)(BLE_GATT_CPF_UNIT_UNITLESS >> 8),
+                                  0x01,
+                                  0x00,
+                                  0x00};
 
  public:
   BLEUnsignedLongCharacteristic timer_chr;
@@ -101,6 +108,31 @@ NeopixelService::NeopixelService()
   this->transition_chr.addDescriptor(transition_descriptor);
   BLEDescriptor noise_descriptor("2901", "noise");
   this->noise_chr.addDescriptor(noise_descriptor);
+
+  // Format Description
+  BLEDescriptor millisec_descriptor("2904", this->msec_format_, 7);
+  this->timer_chr.addDescriptor(millisec_descriptor);
+
+  BLEDescriptor color_unitless_descriptor01("2904", this->color_format_, 7);
+  this->color01_chr.addDescriptor(color_unitless_descriptor01);
+  BLEDescriptor color_unitless_descriptor02("2904", this->color_format_, 7);
+  this->color02_chr.addDescriptor(color_unitless_descriptor02);
+  BLEDescriptor color_unitless_descriptor03("2904", this->color_format_, 7);
+  this->color03_chr.addDescriptor(color_unitless_descriptor03);
+  BLEDescriptor color_unitless_descriptor04("2904", this->color_format_, 7);
+  this->color04_chr.addDescriptor(color_unitless_descriptor04);
+
+  BLEDescriptor num_colors_unitless_descriptor("2904", this->cmd_format_, 7);
+  this->num_colors_chr.addDescriptor(num_colors_unitless_descriptor);
+  BLEDescriptor num_pixels_unitless_descriptor("2904", this->cmd_format_, 7);
+  this->num_pixels_chr.addDescriptor(num_pixels_unitless_descriptor);
+
+  BLEDescriptor trans_unitless_descriptor("2904", this->cmd_format_, 7);
+  this->transition_chr.addDescriptor(trans_unitless_descriptor);
+  BLEDescriptor blending_unitless_descriptor("2904", this->cmd_format_, 7);
+  this->blending_chr.addDescriptor(blending_unitless_descriptor);
+  BLEDescriptor noise_unitless_descriptor("2904", this->cmd_format_, 7);
+  this->noise_chr.addDescriptor(noise_unitless_descriptor);
 }
 
 NeopixelService::~NeopixelService(){};
