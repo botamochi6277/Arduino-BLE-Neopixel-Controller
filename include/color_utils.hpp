@@ -215,6 +215,39 @@ void blend(uint32_t colors[], uint32_t palette[], uint8_t num_pixels,
   }
 }
 
+bool dissolveEasing(uint32_t colors[], uint32_t from[], uint32_t to[],
+                    uint32_t num_pixels, uint32_t progress, uint32_t duration) {
+  // uint32_t pixel_progress = static_cast<uint32_t>(
+  //     num_pixels * (static_cast<float>(progress) / duration));
+  for (uint32_t i = 0; i < num_pixels; i++) {
+    colors[i] = hsbEasing(from[i], to[i], progress, duration, 0);
+  }
+  return progress >= duration;
+}
+
+bool wipeEasing(uint32_t colors[], uint32_t from[], uint32_t to[],
+                uint32_t num_pixels, uint32_t progress, uint32_t duration,
+                bool backward = false) {
+  uint32_t pixel_progress = static_cast<uint32_t>(
+      num_pixels * (static_cast<float>(progress) / duration));
+
+  for (uint32_t i = 0; i < num_pixels; i++) {
+    bool non_wiped;
+    if (!backward) {
+      non_wiped = pixel_progress - 1 < i;
+    } else {
+      non_wiped = (num_pixels - pixel_progress - 1) < i;
+    }
+    if (non_wiped) {
+      colors[i] = from[i];
+    } else {
+      colors[i] = to[i];
+    }
+  }
+
+  return progress >= duration;
+}
+
 bool wipeUpdate(uint32_t colors[], uint32_t from[], uint32_t to[],
                 uint32_t num_pixels, uint32_t progress, bool forward = true) {
   bool b;

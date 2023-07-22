@@ -109,6 +109,7 @@ void setup() {
   palette[3] = pixel_srv.color04_chr.value();
   color::blend(goal_colors, palette, NUM_PIXELS, 2U, 0U);
 
+  // init color buffer
   for (size_t i = 0; i < NUM_PIXELS; i++) {
     start_colors[i] = 0;
     current_colors[i] = 0;
@@ -118,12 +119,11 @@ void setup() {
   unsigned int duration = 10;
   progress = 0;
   for (size_t i = 0; i < duration; i++) {
-    // color::dissolveUpdate(current_colors, start_colors, goal_colors,
-    // NUM_PIXELS,
-    //                       progress, duration);
-    for (int i = 0; i < pixels.numPixels(); i++) {
-      pixels.setPixelColor(i, goal_colors[i]);
-    }
+    color::dissolveUpdate(current_colors, start_colors, goal_colors, NUM_PIXELS,
+                          progress, duration);
+    // for (int i = 0; i < pixels.numPixels(); i++) {
+    //   pixels.setPixelColor(i, goal_colors[i]);
+    // }
     progress += 1;
     pixels.show();
     delay(DELAY_LED);
@@ -134,21 +134,26 @@ void setup() {
 
 void loop() {
 #ifdef SEEED_XIAO_NRF52840_SENSE
-  digitalWrite(LEDB, !digitalRead(LEDB));  // waiting for connection
+  digitalWrite(LEDG, !digitalRead(LEDG));  // heartbeats
 #endif
   BLE.poll();
-  // is base color change
+  // color parameter was changed, updating static colors
   if (pixel_srv.color01_chr.written() || pixel_srv.color02_chr.written() ||
       pixel_srv.color03_chr.written() || pixel_srv.color04_chr.written() ||
-      pixel_srv.blending_chr.written()) {
-    // re-blend static color
-    // assign palette
+      pixel_srv.blending_chr.written() || pixel_srv.num_colors_chr.written()) {
+// re-blend static color
+#ifdef SEEED_XIAO_NRF52840_SENSE
+    digitalWrite(LEDB, !digitalRead(LEDB));  // response for ble value changing
+#endif
+                                             // assign palette
     palette[0] = pixel_srv.color01_chr.value();
     palette[1] = pixel_srv.color02_chr.value();
     palette[2] = pixel_srv.color03_chr.value();
     palette[3] = pixel_srv.color04_chr.value();
 
-    color::blend(goal_colors, palette, NUM_PIXELS, 2U, 0U);
+    color::blend(goal_colors, palette, NUM_PIXELS,
+                 pixel_srv.num_colors_chr.value(),
+                 pixel_srv.blending_chr.value());
     progress = 0;
     completed = false;
     duration = 30;
@@ -157,19 +162,23 @@ void loop() {
     }
   }
   if (completed == false) {
-    completed = color::wipeUpdate(current_colors, start_colors, goal_colors,
-                                  NUM_PIXELS, progress, !backward);
+    completed = color::wipeEasing(current_colors, start_colors, goal_colors,
+                                  NUM_PIXELS, progress, duration, backward);
     // progress ratio = progress / (NUM_PIXELS - 1)
 
     //  apply current color
-    for (int i = 0; i < pixels.numPixels(); i++) {
+    for (uint16_t i = 0; i < pixels.numPixels(); i++) {
       pixels.setPixelColor(i, current_colors[i]);
     }
     pixels.show();
 
     progress += 1;
-    delay(DELAY_LED);
+  } else {
+    // transition was completed
+    // add noise/fluctuation
   }
+
+  delay(DELAY_LED);
 
   // ble
   // BLEDevice central = BLE.central();
