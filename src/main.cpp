@@ -24,13 +24,12 @@ char message[128];  // buffer for sprintf
 
 ble::NeopixelService pixel_srv;
 
-// mode:
-//    act_opt act color2 color1
-// 0x | 0  | 0  | 0     |  0
-unsigned short mode = 0x0000;
-unsigned int progress = 0;
-bool completed = false;  // flag for color transition
-unsigned char act;
+unsigned long milli_sec;
+float clock_sec;
+float transition_start_sec;
+float transition_duration = 3.0f;
+
+bool transition_completed = false;  // flag for color transition
 bool backward;
 
 uint32_t current_colors[NUM_PIXELS];
@@ -41,7 +40,7 @@ uint32_t goal_colors[NUM_PIXELS];
 uint32_t palette[4];
 
 Adafruit_NeoPixel pixels(NUM_PIXELS, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
-uint32_t duration = 10;
+
 // Create a instance of class LSM6DS3
 LSM6DS3 my_imu(I2C_MODE, 0x6A);  // I2C device address 0x6A
 
@@ -80,59 +79,45 @@ void setup() {
   Serial.print("Peripheral address: ");
   String ble_address = BLE.address();
   Serial.println(ble_address);
-  String local_name = "ArduinoNeopixels_" + ble_address;
+  String local_name = "NeoPixels_" + ble_address;
   // set advertised local name and service UUID:
   BLE.setDeviceName(local_name.c_str());
-  BLE.setLocalName("Neopixels");
+  BLE.setLocalName("NeoPixels");
   BLE.setAdvertisedService(pixel_srv);
 
   // add service
   BLE.addService(pixel_srv);
+
+  // start advertising
+  BLE.advertise();
 
   // set the initial value for the characteristic:
   pixel_srv.num_pixels_chr.writeValue(NUM_PIXELS);
   pixel_srv.num_colors_chr.writeValue(2U);
   pixel_srv.color01_chr.writeValue(PALETTE_INFO);
   pixel_srv.color02_chr.writeValue(PALETTE_LIME);
-  // start advertising
-  BLE.advertise();
 
   digitalWrite(PIXEL_PIN, LOW);
   pixels.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
   pixels.setBrightness(20);
   pixels.show();  // Turn OFF all pixels
 
-  // assign palette
-  palette[0] = pixel_srv.color01_chr.value();
-  palette[1] = pixel_srv.color02_chr.value();
-  palette[2] = pixel_srv.color03_chr.value();
-  palette[3] = pixel_srv.color04_chr.value();
-  color::blend(goal_colors, palette, NUM_PIXELS, 2U, 0U);
-
   // init color buffer
   for (size_t i = 0; i < NUM_PIXELS; i++) {
-    start_colors[i] = 0;
     current_colors[i] = 0;
-    goal_colors[i] = palette[0];
   }
 
-  unsigned int duration = 10;
-  progress = 0;
-  for (size_t i = 0; i < duration; i++) {
-    color::dissolveUpdate(current_colors, start_colors, goal_colors, NUM_PIXELS,
-                          progress, duration);
-    // for (int i = 0; i < pixels.numPixels(); i++) {
-    //   pixels.setPixelColor(i, goal_colors[i]);
-    // }
-    progress += 1;
-    pixels.show();
-    delay(DELAY_LED);
-  }
-  progress = 0;
-  completed = true;
+  color::blend(goal_colors, palette, NUM_PIXELS, PALETTE_INFO, PALETTE_LIME);
+  transition_completed = false;
+  milli_sec = millis();
+  clock_sec = milli_sec * 1.0e-3f;
+  transition_start_sec = clock_sec;
 }
 
 void loop() {
+  milli_sec = millis();
+  clock_sec = milli_sec * 1.0e-3f;
+  pixel_srv.timer_chr.writeValue(milli_sec);
 #ifdef SEEED_XIAO_NRF52840_SENSE
   digitalWrite(LEDG, !digitalRead(LEDG));  // heartbeats
 #endif
@@ -145,7 +130,8 @@ void loop() {
 #ifdef SEEED_XIAO_NRF52840_SENSE
     digitalWrite(LEDB, !digitalRead(LEDB));  // response for ble value changing
 #endif
-                                             // assign palette
+    transition_start_sec = clock_sec;
+    // assign palette
     palette[0] = pixel_srv.color01_chr.value();
     palette[1] = pixel_srv.color02_chr.value();
     palette[2] = pixel_srv.color03_chr.value();
@@ -154,30 +140,27 @@ void loop() {
     color::blend(goal_colors, palette, NUM_PIXELS,
                  pixel_srv.num_colors_chr.value(),
                  pixel_srv.blending_chr.value());
-    progress = 0;
-    completed = false;
-    duration = 30;
+
+    transition_completed = false;
+
     for (size_t i = 0; i < NUM_PIXELS; i++) {
       start_colors[i] = current_colors[i];
     }
   }
-  if (completed == false) {
-    completed = color::wipeEasing(current_colors, start_colors, goal_colors,
-                                  NUM_PIXELS, progress, duration, backward);
-    // progress ratio = progress / (NUM_PIXELS - 1)
-
-    //  apply current color
-    for (uint16_t i = 0; i < pixels.numPixels(); i++) {
-      pixels.setPixelColor(i, current_colors[i]);
-    }
-    pixels.show();
-
-    progress += 1;
+  if (transition_completed == false) {
+    transition_completed = color::wipeEasing(
+        current_colors, start_colors, goal_colors, NUM_PIXELS,
+        (clock_sec - transition_start_sec) / transition_duration, false);
   } else {
     // transition was completed
     // add noise/fluctuation
   }
 
+  //  apply current color
+  for (uint16_t i = 0; i < pixels.numPixels(); i++) {
+    pixels.setPixelColor(i, current_colors[i]);
+  }
+  pixels.show();
   delay(DELAY_LED);
 
   // ble
