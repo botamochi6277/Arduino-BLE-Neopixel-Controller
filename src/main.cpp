@@ -28,6 +28,7 @@ unsigned long milli_sec;
 float clock_sec;
 float transition_start_sec;
 float transition_duration = 3.0f;
+float transition_progress = 0.0f;
 
 bool transition_completed = false;  // flag for color transition
 bool backward;
@@ -58,7 +59,7 @@ void setup() {
   pinMode(PIXEL_PIN, OUTPUT);
 
   Serial.begin(115200);
-  Serial.println("Neopixel BLE waking");
+  Serial.println("NeoPixel BLE waking");
 
   if (my_imu.begin() != 0) {
     Serial.println("IMU error");
@@ -94,6 +95,7 @@ void setup() {
   // set the initial value for the characteristic:
   pixel_srv.num_pixels_chr.writeValue(NUM_PIXELS);
   pixel_srv.num_colors_chr.writeValue(2U);
+  pixel_srv.transition_chr.writeValue(TRANSITION_DISSOLVE);
   pixel_srv.color01_chr.writeValue(PALETTE_INFO);
   pixel_srv.color02_chr.writeValue(PALETTE_LIME);
 
@@ -106,8 +108,17 @@ void setup() {
   for (size_t i = 0; i < NUM_PIXELS; i++) {
     current_colors[i] = 0;
   }
+  palette[0] = pixel_srv.color01_chr.value();
+  palette[1] = pixel_srv.color02_chr.value();
+  palette[2] = pixel_srv.color03_chr.value();
+  palette[3] = pixel_srv.color04_chr.value();
 
-  color::blend(goal_colors, palette, NUM_PIXELS, PALETTE_INFO, PALETTE_LIME);
+  color::blend(goal_colors, palette, NUM_PIXELS,
+               pixel_srv.num_colors_chr.value(),
+               pixel_srv.blending_chr.value());
+  sprintf(message, "goal color: #%06x--#%06x", goal_colors[0],
+          goal_colors[NUM_PIXELS - 1]);
+  Serial.println(message);
   transition_completed = false;
   milli_sec = millis();
   clock_sec = milli_sec * 1.0e-3f;
@@ -118,6 +129,7 @@ void loop() {
   milli_sec = millis();
   clock_sec = milli_sec * 1.0e-3f;
   pixel_srv.timer_chr.writeValue(milli_sec);
+
 #ifdef SEEED_XIAO_NRF52840_SENSE
   digitalWrite(LEDG, !digitalRead(LEDG));  // heartbeats
 #endif
@@ -130,6 +142,10 @@ void loop() {
 #ifdef SEEED_XIAO_NRF52840_SENSE
     digitalWrite(LEDB, !digitalRead(LEDB));  // response for ble value changing
 #endif
+
+    Serial.print("BLE params were updated, transition ");
+    Serial.println(pixel_srv.transition_chr.value());
+
     transition_start_sec = clock_sec;
     // assign palette
     palette[0] = pixel_srv.color01_chr.value();
@@ -140,6 +156,9 @@ void loop() {
     color::blend(goal_colors, palette, NUM_PIXELS,
                  pixel_srv.num_colors_chr.value(),
                  pixel_srv.blending_chr.value());
+    sprintf(message, "goal color: #%06x--#%06x", goal_colors[0],
+            goal_colors[NUM_PIXELS - 1]);
+    Serial.println(message);
 
     transition_completed = false;
 
@@ -147,20 +166,53 @@ void loop() {
       start_colors[i] = current_colors[i];
     }
   }
+
+  transition_progress =
+      (clock_sec - transition_start_sec) / transition_duration;
+
   if (transition_completed == false) {
-    transition_completed = color::wipeEasing(
-        current_colors, start_colors, goal_colors, NUM_PIXELS,
-        (clock_sec - transition_start_sec) / transition_duration, false);
+    switch (pixel_srv.transition_chr.value()) {
+      case TRANSITION_DISSOLVE:
+        transition_completed =
+            color::dissolveEasing(current_colors, start_colors, goal_colors,
+                                  NUM_PIXELS, transition_progress);
+        break;
+      case TRANSITION_WIPE:
+        transition_completed =
+            color::wipeEasing(current_colors, start_colors, goal_colors,
+                              NUM_PIXELS, transition_progress, false);
+        break;
+      case TRANSITION_SLIDE:
+        transition_completed =
+            color::slideEasing(current_colors, start_colors, goal_colors,
+                               NUM_PIXELS, transition_progress, false);
+        break;
+      default:
+        break;
+    }
+    if (transition_completed) {
+      sprintf(message, "transition was over: %0.2f", transition_progress);
+      Serial.println(message);
+      sprintf(message, "final color: #%06x--#%06x", current_colors[0],
+              current_colors[NUM_PIXELS - 1]);
+      Serial.println(message);
+    }
+
+    for (uint16_t i = 0; i < pixels.numPixels(); i++) {
+      pixels.setPixelColor(i, current_colors[i]);
+    }
+    pixels.show();
+
   } else {
     // transition was completed
     // add noise/fluctuation
   }
 
   //  apply current color
-  for (uint16_t i = 0; i < pixels.numPixels(); i++) {
-    pixels.setPixelColor(i, current_colors[i]);
-  }
-  pixels.show();
+  // for (uint16_t i = 0; i < pixels.numPixels(); i++) {
+  //   pixels.setPixelColor(i, current_colors[i]);
+  // }
+  // pixels.show();
   delay(DELAY_LED);
 
   // ble

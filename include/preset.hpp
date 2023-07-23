@@ -12,9 +12,10 @@
 #define PRESET_DARK 0x8
 
 // action code
-#define PRESET_ACT_WIPE 0x1
-#define PRESET_ACT_SLIDE 0x2
-#define PRESET_ACT_DISSOLVE 0x3
+#define TRANSITION_DISSOLVE 0x1
+#define TRANSITION_WIPE 0x2
+#define TRANSITION_SLIDE 0x3
+
 #define PRESET_ACT_ACC 0x4
 #define PRESET_ACT_RAINBOW 0x5
 

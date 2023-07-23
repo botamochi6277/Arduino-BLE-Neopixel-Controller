@@ -7,7 +7,16 @@
 
 namespace easing {
 template <typename T>
-T remap(T x, T in_min, T in_max, T out_min, T out_max) {
+T remap(T x, T in_min, T in_max, T out_min, T out_max, bool chip = false) {
+  if (chip) {
+    if (x < in_min) {
+      return out_min;
+    }
+    if (in_max < x) {
+      return out_max;
+    }
+  }
+
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 }  // namespace easing
@@ -140,14 +149,21 @@ uint32_t rgbEasing(uint32_t from, uint32_t to, float progress) {
   uint8_t ri, gi, bi;
   uint8_t w = static_cast<uint8_t>(easing.get(progress));  // weight, 0--255
 
-  ri = easing::remap(w, (uint8_t)0, (uint8_t)255, rf, rt);
-  gi = easing::remap(w, (uint8_t)0, (uint8_t)255, gf, gt);
-  bi = easing::remap(w, (uint8_t)0, (uint8_t)255, bf, bt);
+  ri = easing::remap(w, (uint8_t)0, (uint8_t)255, rf, rt, true);
+  gi = easing::remap(w, (uint8_t)0, (uint8_t)255, gf, gt, true);
+  bi = easing::remap(w, (uint8_t)0, (uint8_t)255, bf, bt, true);
   uint32_t color = ri << 16 | gi << 8 | bi;
   return color;
 }
 
 uint32_t hsbEasing(uint32_t from, uint32_t to, float progress) {
+  if (progress < 0.0f) {
+    return from;
+  }
+  if (0.99f < progress) {
+    return to;
+  }
+
   uint16_t h0, h1;
   uint8_t s0, s1, b0, b1;
 
@@ -159,9 +175,9 @@ uint32_t hsbEasing(uint32_t from, uint32_t to, float progress) {
       static_cast<uint16_t>(0xFFFF * easing.get(progress));       // weight
   uint8_t w8 = static_cast<uint8_t>(255 * easing.get(progress));  // weight
 
-  uint16_t h = easing::remap(w16, (uint16_t)0, (uint16_t)0xFFFF, h0, h1);
-  uint8_t s = easing::remap(w8, (uint8_t)0, (uint8_t)0xFF, s0, s1);
-  uint8_t b = easing::remap(w8, (uint8_t)0, (uint8_t)0xFF, b0, b1);
+  uint16_t h = easing::remap(w16, (uint16_t)0, (uint16_t)0xFFFF, h0, h1, true);
+  uint8_t s = easing::remap(w8, (uint8_t)0, (uint8_t)0xFF, s0, s1, true);
+  uint8_t b = easing::remap(w8, (uint8_t)0, (uint8_t)0xFF, b0, b1, true);
 
   return hsbToHex(h, s, b);
 }
@@ -198,8 +214,15 @@ void blend(uint32_t colors[], uint32_t palette[], uint8_t num_pixels,
 
 bool dissolveEasing(uint32_t colors[], uint32_t from[], uint32_t to[],
                     uint32_t num_pixels, float progress) {
-  // uint32_t pixel_progress = static_cast<uint32_t>(
-  //     num_pixels * (static_cast<float>(progress) / duration));
+  if (progress < 0.0f) {
+    for (uint16_t i = 0; i < num_pixels; i++) {
+      colors[i] = from[i];
+    }
+  } else if (progress > 1.0f) {
+    for (uint16_t i = 0; i < num_pixels; i++) {
+      colors[i] = to[i];
+    }
+  }
   for (uint32_t i = 0; i < num_pixels; i++) {
     colors[i] = hsbEasing(from[i], to[i], progress);
   }
@@ -236,7 +259,34 @@ bool wipeEasing(uint32_t colors[], uint32_t from[], uint32_t to[],
 
   return progress >= 1.0f;
 }
+bool slideEasing(uint32_t colors[], uint32_t from[], uint32_t to[],
+                 uint16_t num_pixels, float progress, bool backward = false) {
+  uint32_t head;
+  uint32_t tail;
+  uint32_t pixel_progress = static_cast<uint32_t>(num_pixels * progress);
+  bool b;
+  for (size_t i = 0; i < num_pixels; i++) {
+    head = pixel_progress - 1;
+    tail = head - num_pixels + 1;
+    if (!backward) {
+      b = head < i;
+    } else {
+      b = i < tail;
+    }
 
+    if (b) {
+      colors[i] = from[i];
+    } else {
+      if (!backward) {
+        colors[i] = to[num_pixels - (head - i) - 1];
+      } else {
+        colors[i] = to[i - tail];
+      }
+    }
+  }
+
+  return progress > 1.0f;
+}
 // bool slideUpdate(uint32_t colors[], uint32_t from[], uint32_t to[],
 //                  uint32_t num_pixels, uint32_t progress, bool forward = true)
 //                  {
