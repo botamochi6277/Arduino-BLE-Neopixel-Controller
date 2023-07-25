@@ -93,10 +93,10 @@ NeopixelService::NeopixelService()
   this->num_pixels_chr.addDescriptor(num_pixels_descriptor);
   this->num_colors_chr.addDescriptor(num_colors_descriptor);
 
-  BLEDescriptor color01_descriptor("2901", "color01");
-  BLEDescriptor color02_descriptor("2901", "color02");
-  BLEDescriptor color03_descriptor("2901", "color03");
-  BLEDescriptor color04_descriptor("2901", "color04");
+  BLEDescriptor color01_descriptor("2901", "color01 (HSB)");
+  BLEDescriptor color02_descriptor("2901", "color02 (HSB)");
+  BLEDescriptor color03_descriptor("2901", "color03 (HSB)");
+  BLEDescriptor color04_descriptor("2901", "color04 (HSB)");
   this->color01_chr.addDescriptor(color01_descriptor);
   this->color02_chr.addDescriptor(color02_descriptor);
   this->color03_chr.addDescriptor(color03_descriptor);

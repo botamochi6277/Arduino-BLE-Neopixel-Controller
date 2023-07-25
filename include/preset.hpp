@@ -46,6 +46,8 @@
 #define PALETTE_MAGENTA 0xEB52BD  // h 318
 #define PALETTE_RED 0xFF006E      // h 334
 
+
+
 const unsigned int PALETTE[] = {
     0,                // 0
     PALETTE_LIGHT,    // 1

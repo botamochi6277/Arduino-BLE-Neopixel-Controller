@@ -59,6 +59,14 @@ void setup() {
   pinMode(PIXEL_PIN, OUTPUT);
 
   Serial.begin(115200);
+
+  for (size_t i = 0; i < 100; i++) {
+    if (Serial) {
+      break;
+    }
+    delay(100);
+  }
+
   Serial.println("NeoPixel BLE waking");
 
   if (my_imu.begin() != 0) {
@@ -96,8 +104,8 @@ void setup() {
   pixel_srv.num_pixels_chr.writeValue(NUM_PIXELS);
   pixel_srv.num_colors_chr.writeValue(2U);
   pixel_srv.transition_chr.writeValue(TRANSITION_DISSOLVE);
-  pixel_srv.color01_chr.writeValue(PALETTE_INFO);
-  pixel_srv.color02_chr.writeValue(PALETTE_LIME);
+  pixel_srv.color01_chr.writeValue(color::hsbToHsbhex(0xff00, 0xff, 0xff));
+  pixel_srv.color02_chr.writeValue(color::hsbToHsbhex(128U * 255U, 255U, 255U));
 
   digitalWrite(PIXEL_PIN, LOW);
   pixels.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
