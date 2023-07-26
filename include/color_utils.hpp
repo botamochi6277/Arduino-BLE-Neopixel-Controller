@@ -227,7 +227,7 @@ void blend(uint32_t hsb_colors[], uint32_t palette_hsb[], uint8_t num_pixels,
 }
 
 bool dissolveEasing(uint32_t hsb_colors[], uint32_t hsb_from[],
-                    uint32_t hsb_to[], uint32_t num_pixels, float progress) {
+                    uint32_t hsb_to[], uint16_t num_pixels, float progress) {
   if (progress < 0.0f) {
     for (uint16_t i = 0; i < num_pixels; i++) {
       hsb_colors[i] = hsb_from[i];
@@ -237,14 +237,15 @@ bool dissolveEasing(uint32_t hsb_colors[], uint32_t hsb_from[],
       hsb_colors[i] = hsb_to[i];
     }
   }
-  for (uint32_t i = 0; i < num_pixels; i++) {
+  for (uint16_t i = 0; i < num_pixels; i++) {
     hsb_colors[i] = hsbEasing(hsb_from[i], hsb_to[i], progress);
   }
   return progress >= 1.0f;
 }
 
 bool wipeEasing(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
-                uint16_t num_pixels, float progress, bool backward = false) {
+                uint16_t num_pixels, float progress, bool backward = false,
+                uint16_t blur_length = 3) {
   if (progress < 0.0f) {
     for (uint16_t i = 0; i < num_pixels; i++) {
       hsb_colors[i] = hsb_from[i];
@@ -255,18 +256,36 @@ bool wipeEasing(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
     }
   }
 
-  uint32_t pixel_progress = static_cast<uint32_t>(num_pixels * progress);
+  int head;
+  int neck;
+  int tail;
+  uint16_t snake_length = num_pixels + blur_length;
 
-  for (uint32_t i = 0; i < num_pixels; i++) {
-    bool non_wiped;
+  uint16_t pixel_progress = static_cast<uint16_t>(snake_length * progress);
+
+  bool non_wiped;
+  bool is_blur;
+  for (uint16_t i = 0; i < num_pixels; i++) {
     if (!backward) {
-      non_wiped = pixel_progress < (i + 1);
+      // forward
+      head = pixel_progress - 1;
+      neck = head - blur_length;
+      tail = head - snake_length + 1;
+      non_wiped = head < (i);
+      is_blur = (neck < i) && (i <= head);
+
     } else {
-      // (num_pixels - pixel_progress - 1) < i
-      non_wiped = (num_pixels) < (i + pixel_progress + 1);
+      head = snake_length - pixel_progress - 1;
+      neck = head + blur_length;
+      tail = head + snake_length;
+      non_wiped = i < head;
+      is_blur = (head <= i) && (i < neck);
     }
     if (non_wiped) {
       hsb_colors[i] = hsb_from[i];
+    } else if (is_blur) {
+      float mini_progress = static_cast<float>(i - neck) / blur_length;
+      hsb_colors[i] = hsbEasing(hsb_from[neck], hsb_to[head], mini_progress);
     } else {
       hsb_colors[i] = hsb_to[i];
     }
@@ -275,10 +294,11 @@ bool wipeEasing(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
   return progress >= 1.0f;
 }
 bool slideEasing(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
-                 uint16_t num_pixels, float progress, bool backward = false) {
+                 uint16_t num_pixels, float progress, bool backward = false,
+                 uint16_t bur_length = 3U) {
   int head;
   int tail;
-  uint32_t pixel_progress = static_cast<uint32_t>(num_pixels * progress);
+  uint16_t pixel_progress = static_cast<uint16_t>(num_pixels * progress);
   bool b;
   for (int i = 0; i < num_pixels; i++) {
     head = pixel_progress - 1;
