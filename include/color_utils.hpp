@@ -195,7 +195,7 @@ uint32_t hsbEasing(uint32_t hsb_from, uint32_t hsb_to, float progress) {
 
   return hsbToHsbhex(h, s, b);
 }
-void blend(uint32_t rgb_colors[], uint32_t palette_hsb[], uint8_t num_pixels,
+void blend(uint32_t hsb_colors[], uint32_t palette_hsb[], uint8_t num_pixels,
            uint8_t palette_size = 2, uint8_t blend_type = 0) {
   if (palette_size == 0) {
     return;
@@ -203,7 +203,7 @@ void blend(uint32_t rgb_colors[], uint32_t palette_hsb[], uint8_t num_pixels,
 
   if (palette_size == 1) {
     for (size_t i = 0; i < num_pixels; i++) {
-      rgb_colors[i] = hsbhexTohex(palette_hsb[0]);
+      hsb_colors[i] = palette_hsb[0];
     }
     return;
   }
@@ -215,9 +215,8 @@ void blend(uint32_t rgb_colors[], uint32_t palette_hsb[], uint8_t num_pixels,
     case 0:
       // gradient
       for (uint8_t i = 0; i < num_pixels; i++) {
-        rgb_colors[i] =
-            hsbhexTohex(hsbEasing(palette_hsb[0], palette_hsb[1],
-                                  static_cast<float>(i) / num_pixels));
+        hsb_colors[i] = hsbEasing(palette_hsb[0], palette_hsb[1],
+                                  static_cast<float>(i) / num_pixels);
       }
 
       break;
@@ -227,32 +226,32 @@ void blend(uint32_t rgb_colors[], uint32_t palette_hsb[], uint8_t num_pixels,
   }
 }
 
-bool dissolveEasing(uint32_t colors[], uint32_t from[], uint32_t to[],
-                    uint32_t num_pixels, float progress) {
+bool dissolveEasing(uint32_t hsb_colors[], uint32_t hsb_from[],
+                    uint32_t hsb_to[], uint32_t num_pixels, float progress) {
   if (progress < 0.0f) {
     for (uint16_t i = 0; i < num_pixels; i++) {
-      colors[i] = from[i];
+      hsb_colors[i] = hsb_from[i];
     }
   } else if (progress > 1.0f) {
     for (uint16_t i = 0; i < num_pixels; i++) {
-      colors[i] = to[i];
+      hsb_colors[i] = hsb_to[i];
     }
   }
   for (uint32_t i = 0; i < num_pixels; i++) {
-    colors[i] = hsbEasing(from[i], to[i], progress);
+    hsb_colors[i] = hsbEasing(hsb_from[i], hsb_to[i], progress);
   }
   return progress >= 1.0f;
 }
 
-bool wipeEasing(uint32_t colors[], uint32_t from[], uint32_t to[],
+bool wipeEasing(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
                 uint16_t num_pixels, float progress, bool backward = false) {
   if (progress < 0.0f) {
     for (uint16_t i = 0; i < num_pixels; i++) {
-      colors[i] = from[i];
+      hsb_colors[i] = hsb_from[i];
     }
   } else if (progress > 1.0f) {
     for (uint16_t i = 0; i < num_pixels; i++) {
-      colors[i] = to[i];
+      hsb_colors[i] = hsb_to[i];
     }
   }
 
@@ -261,26 +260,27 @@ bool wipeEasing(uint32_t colors[], uint32_t from[], uint32_t to[],
   for (uint32_t i = 0; i < num_pixels; i++) {
     bool non_wiped;
     if (!backward) {
-      non_wiped = pixel_progress - 1 < i;
+      non_wiped = pixel_progress < (i + 1);
     } else {
-      non_wiped = (num_pixels - pixel_progress - 1) < i;
+      // (num_pixels - pixel_progress - 1) < i
+      non_wiped = (num_pixels) < (i + pixel_progress + 1);
     }
     if (non_wiped) {
-      colors[i] = from[i];
+      hsb_colors[i] = hsb_from[i];
     } else {
-      colors[i] = to[i];
+      hsb_colors[i] = hsb_to[i];
     }
   }
 
   return progress >= 1.0f;
 }
-bool slideEasing(uint32_t colors[], uint32_t from[], uint32_t to[],
+bool slideEasing(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
                  uint16_t num_pixels, float progress, bool backward = false) {
-  uint32_t head;
-  uint32_t tail;
+  int head;
+  int tail;
   uint32_t pixel_progress = static_cast<uint32_t>(num_pixels * progress);
   bool b;
-  for (size_t i = 0; i < num_pixels; i++) {
+  for (int i = 0; i < num_pixels; i++) {
     head = pixel_progress - 1;
     tail = head - num_pixels + 1;
     if (!backward) {
@@ -290,46 +290,18 @@ bool slideEasing(uint32_t colors[], uint32_t from[], uint32_t to[],
     }
 
     if (b) {
-      colors[i] = from[i];
+      hsb_colors[i] = hsb_from[i];
     } else {
       if (!backward) {
-        colors[i] = to[num_pixels - (head - i) - 1];
+        hsb_colors[i] = hsb_to[num_pixels - (head - i) - 1];
       } else {
-        colors[i] = to[i - tail];
+        hsb_colors[i] = hsb_to[i - tail];
       }
     }
   }
 
   return progress > 1.0f;
 }
-// bool slideUpdate(uint32_t colors[], uint32_t from[], uint32_t to[],
-//                  uint32_t num_pixels, uint32_t progress, bool forward = true)
-//                  {
-//   uint32_t head;
-//   uint32_t tail;
-//   bool b;
-//   for (size_t i = 0; i < num_pixels; i++) {
-//     head = progress - 1;
-//     tail = head - num_pixels + 1;
-//     if (forward) {
-//       b = head < i;
-//     } else {
-//       b = i < tail;
-//     }
-
-//     if (b) {
-//       colors[i] = from[i];
-//     } else {
-//       if (forward) {
-//         colors[i] = to[num_pixels - (head - i) - 1];
-//       } else {
-//         colors[i] = to[i - tail];
-//       }
-//     }
-//   }
-
-//   return progress >= num_pixels;
-// }
 
 // bool wipe_dissolve(uint32_t colors[], uint32_t from[], uint32_t to[],
 //                    uint32_t num_pixels, uint32_t progress,

@@ -164,7 +164,7 @@ void loop() {
     color::blend(goal_colors, palette, NUM_PIXELS,
                  pixel_srv.num_colors_chr.value(),
                  pixel_srv.blending_chr.value());
-    sprintf(message, "goal color: #%06x--#%06x", goal_colors[0],
+    sprintf(message, "goal color: $%08x--$%08x", goal_colors[0],
             goal_colors[NUM_PIXELS - 1]);
     Serial.println(message);
 
@@ -201,13 +201,13 @@ void loop() {
     if (transition_completed) {
       sprintf(message, "transition was over: %0.2f", transition_progress);
       Serial.println(message);
-      sprintf(message, "final color: #%06x--#%06x", current_colors[0],
+      sprintf(message, "final color: $%08x--$%08x", current_colors[0],
               current_colors[NUM_PIXELS - 1]);
       Serial.println(message);
     }
 
     for (uint16_t i = 0; i < pixels.numPixels(); i++) {
-      pixels.setPixelColor(i, current_colors[i]);
+      pixels.setPixelColor(i, color::hsbhexTohex(current_colors[i]));
     }
     pixels.show();
 
@@ -222,83 +222,6 @@ void loop() {
   // }
   // pixels.show();
   delay(DELAY_LED);
-
-  // ble
-  // BLEDevice central = BLE.central();
-  // // if a central is connected to peripheral:
-  // if (central) {
-  //   digitalWrite(LEDB, HIGH);  // turn off
-  //   digitalWrite(LEDG, LOW);   // turn on
-  //   // print the central's MAC address:
-  //   sprintf(message, "Connected to central: %s", central.address().c_str());
-  //   Serial.println(message);
-
-  // }
-  // end of ble
-
-  // // if a central is connected to peripheral:
-  // if (central) {
-  //   digitalWrite(LEDB, HIGH);
-  //   digitalWrite(LEDG, LOW);
-  //   // print the central's MAC address:
-  //   sprintf(message, "Connected to central: %s", central.address().c_str());
-  //   Serial.println(message);
-
-  //   // while the central is still connected to peripheral:
-  //   while (central.connected()) {
-  //     // if the remote device wrote to the characteristic,
-  //     // use the value to control the LED:
-  //     if (switch_characteristic.written()) {
-  //       progress = 0;
-  //       completed = false;
-  //       mode = switch_characteristic.valueLE();
-  //       sprintf(message, "Receive new value: 0x%04x", mode);
-  //       Serial.println(message);
-
-  //       act = (0x0f00 & mode) >> 8;
-  //       sprintf(message, "Action: 0x%01x", act);
-  //       Serial.println(message);
-
-  //       backward = ((0xf000 & mode) >> 12) > 0;
-
-  //       unsigned char color_code1 = mode & 0x0F;
-  //       unsigned char color_code2 = (mode & 0xF0) >> 4;
-
-  //       sprintf(message, "color: 0x%01x -- 0x%01x", color_code1,
-  //       color_code2); Serial.println(message);
-
-  //       gradientColor(goal_colors, NUM_PIXELS, PALETTE[color_code1],
-  //                     PALETTE[color_code2]);
-
-  //       for (size_t i = 0; i < NUM_PIXELS; i++) {
-  //         start_colors[i] = current_colors[i];
-  //       }
-  //     }
-
-  //     // led strip update
-  //     if (completed == false) {
-  //       unsigned short duration = 30;
-  //       u_int32_t cc = 0;
-
-  //       switch (act) {
-  //         case PRESET_ACT_WIPE: {
-  //           completed = wipeUpdate(current_colors, start_colors, goal_colors,
-  //                                  NUM_PIXELS, progress, !backward);
-  //           // progress ratio = progress / (NUM_PIXELS - 1)
-  //         } break;
-
-  //         case PRESET_ACT_SLIDE: {
-  //           completed = slideUpdate(current_colors, start_colors,
-  //           goal_colors,
-  //                                   NUM_PIXELS, progress);
-  //         } break;
-
-  //         case PRESET_ACT_DISSOLVE: {
-  //           duration = 30;
-  //           completed =
-  //               dissolveUpdate(current_colors, start_colors, goal_colors,
-  //                              NUM_PIXELS, progress, duration);
-  //         } break;
   //         case PRESET_ACT_ACC: {  // imu acc
   //           float x = my_imu.readFloatAccelX();
   //           float y = my_imu.readFloatAccelY();
