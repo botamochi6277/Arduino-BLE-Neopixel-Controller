@@ -1,99 +1,156 @@
 #ifndef STRIP_HPP
 #define STRIP_HPP
-#include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
+#include <Arduino.h>
 
-// Fill strip pixels one after another with a color. Strip is NOT cleared
-// first; anything there will be covered pixel by pixel. Pass in color
-// (as a single 'packed' 32-bit value, which you can get by calling
-// strip.Color(red, green, blue) as shown in the loop() function above),
-// and a delay time (in milliseconds) between pixels.
-void colorWipe(Adafruit_NeoPixel &strip, uint32_t color, int wait)
-{
-    for (int i = 0; i < strip.numPixels(); i++)
-    {                                  // For each pixel in strip...
-        strip.setPixelColor(i, color); //  Set pixel's color (in RAM)
-        strip.show();                  //  Update strip to match
-        delay(wait);                   //  Pause for a moment
+#include "color_utils.hpp"
+
+namespace led_strip {
+void blend(uint32_t hsb_colors[], uint32_t palette_hsb[], uint16_t num_pixels,
+           uint8_t palette_size = 2, uint8_t blend_type = 0) {
+  if (palette_size == 0) {
+    return;
+  }
+
+  if (palette_size == 1) {
+    for (size_t i = 0; i < num_pixels; i++) {
+      hsb_colors[i] = palette_hsb[0];
     }
+    return;
+  }
+
+  // blend type
+  // 0: gradient
+  // 1: cycle
+  switch (blend_type) {
+    case 0:
+      // gradient
+      for (uint8_t i = 0; i < num_pixels; i++) {
+        hsb_colors[i] = color::hsbhexEasing(palette_hsb[0], palette_hsb[1],
+                                            static_cast<float>(i) / num_pixels);
+      }
+
+      break;
+
+    default:
+      break;
+  }
 }
 
-// Theater-marquee-style chasing lights. Pass in a color (32-bit value,
-// a la strip.Color(r,g,b) as mentioned above), and a delay time (in ms)
-// between frames.
-void theaterChase(Adafruit_NeoPixel &strip, uint32_t color, int wait)
-{
-    for (int a = 0; a < 10; a++)
-    { // Repeat 10 times...
-        for (int b = 0; b < 3; b++)
-        {                  //  'b' counts from 0 to 2...
-            strip.clear(); //   Set all pixels in RAM to 0 (off)
-            // 'c' counts up from 'b' to end of strip in steps of 3...
-            for (int c = b; c < strip.numPixels(); c += 3)
-            {
-                strip.setPixelColor(c, color); // Set pixel 'c' to value 'color'
-            }
-            strip.show(); // Update strip with new contents
-            delay(wait);  // Pause for a moment
-        }
-    }
+void easeColors(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
+                float weights[], uint16_t num_pixels) {
+  for (uint16_t i = 0; i < num_pixels; i++) {
+    hsb_colors[i] = color::hsbhexEasing(hsb_from[i], hsb_to[i], weights[i]);
+  }
 }
 
-// Rainbow cycle along whole strip. Pass delay time (in ms) between frames.
-void rainbow(Adafruit_NeoPixel &strip, int wait,
-             long first_pixel_hue = 0,
-             long final_pixel_hue = 65536,
-             int num_loops = 5,
-             int hue_increment = 256)
-{
-    // Hue of first pixel runs 5 complete loops through the color wheel.
-    // Color wheel has a range of 65536 but it's OK if we roll over, so
-    // just count from 0 to 5*65536. Adding 256 to firstPixelHue each time
-    // means we'll make 5*65536/256 = 1280 passes through this outer loop:
-    for (long firstPixelHue = first_pixel_hue; firstPixelHue < num_loops * final_pixel_hue; firstPixelHue += hue_increment)
-    {
-        for (int i = 0; i < strip.numPixels(); i++)
-        { // For each pixel in strip...
-            // Offset pixel hue by an amount to make one full revolution of the
-            // color wheel (range of 65536) along the length of the strip
-            // (strip.numPixels() steps):
-            int pixelHue = firstPixelHue + (i * final_pixel_hue / strip.numPixels());
-            // strip.ColorHSV() can take 1 or 3 arguments: a hue (0 to 65535) or
-            // optionally add saturation and value (brightness) (each 0 to 255).
-            // Here we're using just the single-argument hue variant. The result
-            // is passed through strip.gamma32() to provide 'truer' colors
-            // before assigning to each pixel:
-            strip.setPixelColor(i, strip.gamma32(strip.ColorHSV(pixelHue)));
-        }
-        strip.show(); // Update strip with new contents
-        delay(wait);  // Pause for a moment
-    }
+// transition
+void dissolveWeight(float weights[], uint16_t num_pixels,
+                    float progress_ratio) {
+  for (size_t i = 0; i < num_pixels; i++) {
+    weights[i] = progress_ratio;
+  }
 }
 
-// Rainbow-enhanced theater marquee. Pass delay time (in ms) between frames.
-void theaterChaseRainbow(Adafruit_NeoPixel &strip, int wait)
-{
-    int firstPixelHue = 0; // First pixel starts at red (hue 0)
-    for (int a = 0; a < 30; a++)
-    { // Repeat 30 times...
-        for (int b = 0; b < 3; b++)
-        {                  //  'b' counts from 0 to 2...
-            strip.clear(); //   Set all pixels in RAM to 0 (off)
-            // 'c' counts up from 'b' to end of strip in increments of 3...
-            for (int c = b; c < strip.numPixels(); c += 3)
-            {
-                // hue of pixel 'c' is offset by an amount to make one full
-                // revolution of the color wheel (range 65536) along the length
-                // of the strip (strip.numPixels() steps):
-                int hue = firstPixelHue + c * 65536L / strip.numPixels();
-                uint32_t color = strip.gamma32(strip.ColorHSV(hue)); // hue -> RGB
-                strip.setPixelColor(c, color);                       // Set pixel 'c' to value 'color'
-            }
-            strip.show();                // Update strip with new contents
-            delay(wait);                 // Pause for a moment
-            firstPixelHue += 65536 / 90; // One cycle of color wheel over 90 frames
-        }
+void wipeWeight(float weights[], uint16_t num_pixels, float progress_ratio,
+                float blur_width, bool is_backward = false) {
+  // blur_width 0--1.0 relative length to pixels length
+  for (uint16_t index = 0; index < num_pixels; index++) {
+    auto r = static_cast<float>(index) / num_pixels;
+    if (!is_backward) {
+      weights[index] = easing::hardSigmoid(
+          (1.0f - r) + (1.0f + blur_width) * progress_ratio - 1.0f, blur_width);
+    } else {
+      weights[index] = easing::hardSigmoid(
+          r + (1.0f + blur_width) * progress_ratio - 1.0f, blur_width);
     }
+  }
+};
+
+bool dissolveEasing(uint32_t hsb_colors[], uint32_t hsb_from[],
+                    uint32_t hsb_to[], float weights[], uint16_t num_pixels,
+                    float progress) {
+  dissolveWeight(weights, num_pixels, progress);
+  easeColors(hsb_colors, hsb_from, hsb_to, weights, num_pixels);
+  return progress >= 1.0f;
 }
+
+bool wipeEasing(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
+                float weights[], uint16_t num_pixels, float progress,
+                bool is_backward = false, uint16_t blur_length = 3U) {
+  float blur_width = static_cast<float>(blur_length) / num_pixels;
+  wipeWeight(weights, num_pixels, progress, blur_width, is_backward);
+  easeColors(hsb_colors, hsb_from, hsb_to, weights, num_pixels);
+  return progress >= 1.0f;
+}
+
+bool slideEasing(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
+                 float weights[], uint16_t num_pixels, float progress,
+                 bool is_backward = false, uint16_t blur_length = 3U) {
+  float blur_width = static_cast<float>(blur_length) / num_pixels;
+  wipeWeight(weights, num_pixels, progress, blur_width, is_backward);
+  // use hsb_colors as shifted color cache
+  //  this is shallow copy
+  auto shifted_goal_colors = hsb_colors;
+
+  uint16_t neck_idx = 0U;
+  if (!is_backward) {
+    for (uint16_t index = num_pixels - 1; 0 <= index; index--) {
+      if (weights[index] < 0.99) {
+        shifted_goal_colors[index] = hsb_to[num_pixels - 1];
+      } else {
+        neck_idx = index;
+        break;
+      }
+    }
+    for (uint16_t index = neck_idx; 0 <= index; index--) {
+      shifted_goal_colors[index] = hsb_to[num_pixels - 1 + index - neck_idx];
+    }
+  } else {
+    for (uint16_t index = 0; index < num_pixels; index++) {
+      if (weights[index] < 0.99) {
+        shifted_goal_colors[index] = hsb_to[0];
+      } else {
+        neck_idx = index;
+        break;
+      }
+    }
+    for (uint16_t index = neck_idx; index < num_pixels; index++) {
+      shifted_goal_colors[index] = hsb_to[index];
+    }
+  }
+
+  easeColors(hsb_colors, hsb_from, shifted_goal_colors, weights, num_pixels);
+
+  return progress > 1.0f;
+}
+
+// /**
+//  * @brief assign easing color
+//  *
+//  * @param colors array of colors
+//  * @param num_pixels
+//  * @param left
+//  * @param right
+//  */
+// void gradientColor(uint32_t colors[], size_t num_pixels, uint32_t left,
+//                    uint32_t right) {
+//   for (size_t i = 0; i < num_pixels; i++) {
+//     colors[i] = color::rgbEasing(left, right, static_cast<float>(i) /
+//     num_pixels);
+//   }
+// }
+
+// void rainbowColor(uint32_t colors[], size_t num_pixels, unsigned char s =
+// 255,
+//                   unsigned char v = 200) {
+//   unsigned char hue = 0;
+
+//   for (size_t i = 0; i < num_pixels; i++) {
+//     hue = (0xFFFF * i) / num_pixels;
+//     colors[i] = color::hsbToHex(hue, s, v);
+//   }
+// }
+};  // namespace led_strip
 
 #endif

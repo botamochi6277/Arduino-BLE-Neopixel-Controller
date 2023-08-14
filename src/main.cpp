@@ -13,6 +13,7 @@
 #include "neopixel_service.hpp"
 #include "preset.hpp"
 #include "strip.hpp"
+
 // Neopixel variables
 #define PIXEL_PIN 7  // MOSI
 #define NUM_PIXELS 45
@@ -39,6 +40,7 @@ uint32_t static_colors[NUM_PIXELS];
 uint32_t start_colors[NUM_PIXELS];
 uint32_t goal_colors[NUM_PIXELS];
 uint32_t palette[4];
+float transition_weights[NUM_PIXELS];
 
 Adafruit_NeoPixel pixels(NUM_PIXELS, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -121,9 +123,9 @@ void setup() {
   palette[2] = pixel_srv.color03_chr.value();
   palette[3] = pixel_srv.color04_chr.value();
 
-  color::blend(goal_colors, palette, NUM_PIXELS,
-               pixel_srv.num_colors_chr.value(),
-               pixel_srv.blending_chr.value());
+  led_strip::blend(goal_colors, palette, NUM_PIXELS,
+                   pixel_srv.num_colors_chr.value(),
+                   pixel_srv.blending_chr.value());
   sprintf(message, "goal color: #%06x--#%06x", goal_colors[0],
           goal_colors[NUM_PIXELS - 1]);
   Serial.println(message);
@@ -161,9 +163,9 @@ void loop() {
     palette[2] = pixel_srv.color03_chr.value();
     palette[3] = pixel_srv.color04_chr.value();
 
-    color::blend(goal_colors, palette, NUM_PIXELS,
-                 pixel_srv.num_colors_chr.value(),
-                 pixel_srv.blending_chr.value());
+    led_strip::blend(goal_colors, palette, NUM_PIXELS,
+                     pixel_srv.num_colors_chr.value(),
+                     pixel_srv.blending_chr.value());
     sprintf(message, "goal color: $%08x--$%08x", goal_colors[0],
             goal_colors[NUM_PIXELS - 1]);
     Serial.println(message);
@@ -181,19 +183,19 @@ void loop() {
   if (transition_completed == false) {
     switch (pixel_srv.transition_chr.value()) {
       case TRANSITION_DISSOLVE:
-        transition_completed =
-            color::dissolveEasing(current_colors, start_colors, goal_colors,
-                                  NUM_PIXELS, transition_progress);
+        transition_completed = led_strip::dissolveEasing(
+            current_colors, start_colors, goal_colors, transition_weights,
+            NUM_PIXELS, transition_progress);
         break;
       case TRANSITION_WIPE:
-        transition_completed =
-            color::wipeEasing(current_colors, start_colors, goal_colors,
-                              NUM_PIXELS, transition_progress, false);
+        transition_completed = led_strip::wipeEasing(
+            current_colors, start_colors, goal_colors, transition_weights,
+            NUM_PIXELS, transition_progress, false);
         break;
       case TRANSITION_SLIDE:
-        transition_completed =
-            color::slideEasing(current_colors, start_colors, goal_colors,
-                               NUM_PIXELS, transition_progress, false);
+        transition_completed = led_strip::slideEasing(
+            current_colors, start_colors, goal_colors, transition_weights,
+            NUM_PIXELS, transition_progress, false);
         break;
       default:
         break;
