@@ -21,8 +21,8 @@ class NeopixelService : public BLEService {
       0x00};
   const uint8_t color_format_[7] = {BLE_GATT_CPF_FORMAT_UINT32,
                                     0b0,  // exp
-                                    (uint8_t)BLE_GATT_CPF_UNIT_UNITLESS,
-                                    (uint8_t)(BLE_GATT_CPF_UNIT_UNITLESS >> 8),
+                                    (uint8_t)BLE_GATT_CPF_UNIT_HSB,
+                                    (uint8_t)(BLE_GATT_CPF_UNIT_HSB >> 8),
                                     0x01,
                                     0x00,
                                     0x00};
@@ -54,24 +54,17 @@ class NeopixelService : public BLEService {
 NeopixelService::NeopixelService()
     : BLEService("19B10000-E8F2-537E-4F6C-D104768A1214"),
       timer_chr("19B10001-E8F2-537E-4F6C-D104768A1214", BLERead | BLENotify),
-      num_pixels_chr("19B10002-E8F2-537E-4F6C-D104768A1214",
-                     BLERead | BLENotify),
+      num_pixels_chr("19B10002-E8F2-537E-4F6C-D104768A1214", BLERead),
       num_colors_chr("19B10003-E8F2-537E-4F6C-D104768A1214",
-                     BLERead | BLEWrite | BLENotify),
-      color01_chr("19B10004-E8F2-537E-4F6C-D104768A1214",
-                  BLERead | BLEWrite | BLENotify),
-      color02_chr("19B10005-E8F2-537E-4F6C-D104768A1214",
-                  BLERead | BLEWrite | BLENotify),
-      color03_chr("19B10006-E8F2-537E-4F6C-D104768A1214",
-                  BLERead | BLEWrite | BLENotify),
-      color04_chr("19B10007-E8F2-537E-4F6C-D104768A1214",
-                  BLERead | BLEWrite | BLENotify),
-      blending_chr("19B10008-E8F2-537E-4F6C-D104768A1214",
-                   BLERead | BLEWrite | BLENotify),
+                     BLERead | BLEWrite),
+      color01_chr("19B10004-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
+      color02_chr("19B10005-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
+      color03_chr("19B10006-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
+      color04_chr("19B10007-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
+      blending_chr("19B10008-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
       transition_chr("19B10009-E8F2-537E-4F6C-D104768A1214",
-                     BLERead | BLEWrite | BLENotify),
-      noise_chr("19B10010-E8F2-537E-4F6C-D104768A1214",
-                BLERead | BLEWrite | BLENotify) {
+                     BLERead | BLEWrite),
+      noise_chr("19B10010-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite) {
   // add characteristics to service
   this->addCharacteristic(this->timer_chr);
   this->addCharacteristic(this->num_pixels_chr);

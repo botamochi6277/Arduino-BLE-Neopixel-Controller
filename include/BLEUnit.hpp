@@ -1,6 +1,8 @@
 #ifndef BLE_UNIT_HPP
 #define BLE_UNIT_HPP
 
+// https://btprodspecificationrefs.blob.core.windows.net/assigned-numbers/Assigned%20Number%20Types/Assigned_Numbers.pdf
+// pp.78--81 0x2700--0x27c8 are assigned
 #define BLE_GATT_CPF_UNIT_UNITLESS 0x2700
 #define BLE_GATT_CPF_UNIT_METER 0x2701   // length(meter)
 #define BLE_GATT_CPF_UNIT_KG 0x2702      // mass(kg)
@@ -17,4 +19,7 @@
 
 #define BLE_GATT_CPF_UNIT_RAD_PER_S 0x2743  // angular velocity (rad/s)
 
+// custom
+#define BLE_GATT_CPF_UNIT_RGB 0x27F0  // rgb
+#define BLE_GATT_CPF_UNIT_HSB 0x27F1  // rgb
 #endif

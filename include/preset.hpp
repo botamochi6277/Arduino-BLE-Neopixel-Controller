@@ -11,10 +11,14 @@
 #define PRESET_LIGHT 0x7
 #define PRESET_DARK 0x8
 
-// action code
+// transition code
 #define TRANSITION_DISSOLVE 0x1
 #define TRANSITION_WIPE 0x2
 #define TRANSITION_SLIDE 0x3
+
+// fluctuation code
+#define FLUCTUATION_TIME 0x01
+#define FLUCTUATION_ACC 0x02
 
 #define PRESET_ACT_ACC 0x4
 #define PRESET_ACT_RAINBOW 0x5
@@ -45,8 +49,6 @@
 #define PALETTE_VIOLET 0x8338EC   // h 265
 #define PALETTE_MAGENTA 0xEB52BD  // h 318
 #define PALETTE_RED 0xFF006E      // h 334
-
-
 
 const unsigned int PALETTE[] = {
     0,                // 0

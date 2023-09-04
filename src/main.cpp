@@ -30,17 +30,20 @@ float clock_sec;
 float transition_start_sec;
 float transition_duration = 3.0f;
 float transition_progress = 0.0f;
+unsigned int loop_count = 0;
 
 bool transition_completed = false;  // flag for color transition
 bool backward;
 
 uint32_t current_colors[NUM_PIXELS];
-uint32_t static_colors[NUM_PIXELS];
 
 uint32_t start_colors[NUM_PIXELS];
-uint32_t goal_colors[NUM_PIXELS];
+uint32_t transited_colors[NUM_PIXELS];
 uint32_t palette[4];
 float transition_weights[NUM_PIXELS];
+
+// FLUCTUATION_TIME
+uint32_t fluctuation_colors[NUM_PIXELS];
 
 Adafruit_NeoPixel pixels(NUM_PIXELS, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -116,23 +119,19 @@ void setup() {
 
   // init color buffer
   for (size_t i = 0; i < NUM_PIXELS; i++) {
-    current_colors[i] = 0;
+    current_colors[i] = color::hsbToHsbhex(0xff00, 0xff, 0x00);
   }
   palette[0] = pixel_srv.color01_chr.value();
   palette[1] = pixel_srv.color02_chr.value();
   palette[2] = pixel_srv.color03_chr.value();
   palette[3] = pixel_srv.color04_chr.value();
 
-  led_strip::blend(goal_colors, palette, NUM_PIXELS,
-                   pixel_srv.num_colors_chr.value(),
-                   pixel_srv.blending_chr.value());
-  sprintf(message, "goal color: #%06x--#%06x", goal_colors[0],
-          goal_colors[NUM_PIXELS - 1]);
-  Serial.println(message);
-  transition_completed = false;
-  milli_sec = millis();
-  clock_sec = milli_sec * 1.0e-3f;
-  transition_start_sec = clock_sec;
+  // temporal
+  for (size_t i = 0; i < NUM_PIXELS; i++) {
+    fluctuation_colors[i] = 0xFFFFFFFF;
+  }
+
+  loop_count = 0;
 }
 
 void loop() {
@@ -147,7 +146,8 @@ void loop() {
   // color parameter was changed, updating static colors
   if (pixel_srv.color01_chr.written() || pixel_srv.color02_chr.written() ||
       pixel_srv.color03_chr.written() || pixel_srv.color04_chr.written() ||
-      pixel_srv.blending_chr.written() || pixel_srv.num_colors_chr.written()) {
+      pixel_srv.blending_chr.written() || pixel_srv.num_colors_chr.written() ||
+      loop_count == 0) {
 // re-blend static color
 #ifdef SEEED_XIAO_NRF52840_SENSE
     digitalWrite(LEDB, !digitalRead(LEDB));  // response for ble value changing
@@ -163,11 +163,11 @@ void loop() {
     palette[2] = pixel_srv.color03_chr.value();
     palette[3] = pixel_srv.color04_chr.value();
 
-    led_strip::blend(goal_colors, palette, NUM_PIXELS,
+    led_strip::blend(transited_colors, palette, NUM_PIXELS,
                      pixel_srv.num_colors_chr.value(),
                      pixel_srv.blending_chr.value());
-    sprintf(message, "goal color: $%08x--$%08x", goal_colors[0],
-            goal_colors[NUM_PIXELS - 1]);
+    sprintf(message, "transition target color: $%08x--$%08x",
+            transited_colors[0], transited_colors[NUM_PIXELS - 1]);
     Serial.println(message);
 
     transition_completed = false;
@@ -184,17 +184,17 @@ void loop() {
     switch (pixel_srv.transition_chr.value()) {
       case TRANSITION_DISSOLVE:
         transition_completed = led_strip::dissolveEasing(
-            current_colors, start_colors, goal_colors, transition_weights,
+            current_colors, start_colors, transited_colors, transition_weights,
             NUM_PIXELS, transition_progress);
         break;
       case TRANSITION_WIPE:
         transition_completed = led_strip::wipeEasing(
-            current_colors, start_colors, goal_colors, transition_weights,
+            current_colors, start_colors, transited_colors, transition_weights,
             NUM_PIXELS, transition_progress, false);
         break;
       case TRANSITION_SLIDE:
         transition_completed = led_strip::slideEasing(
-            current_colors, start_colors, goal_colors, transition_weights,
+            current_colors, start_colors, transited_colors, transition_weights,
             NUM_PIXELS, transition_progress, false);
         break;
       default:
@@ -206,23 +206,42 @@ void loop() {
       sprintf(message, "final color: $%08x--$%08x", current_colors[0],
               current_colors[NUM_PIXELS - 1]);
       Serial.println(message);
+
+      for (size_t i = 0; i < NUM_PIXELS; i++) {
+        start_colors[i] = current_colors[i];
+      }
+      // led_strip::blend(fluctuation_colors, palette, NUM_PIXELS,
+      //                  pixel_srv.num_colors_chr.value(),
+      //                  pixel_srv.blending_chr.value());
     }
 
-    for (uint16_t i = 0; i < pixels.numPixels(); i++) {
-      pixels.setPixelColor(i, color::hsbhexTohex(current_colors[i]));
-    }
-    pixels.show();
-
-  } else {
-    // transition was completed
-    // add noise/fluctuation
+    // for (uint16_t i = 0; i < pixels.numPixels(); i++) {
+    //   pixels.setPixelColor(i, color::hsbhexTohex(current_colors[i]));
+    // }
+    // pixels.show();
   }
 
-  //  apply current color
-  // for (uint16_t i = 0; i < pixels.numPixels(); i++) {
-  //   pixels.setPixelColor(i, current_colors[i]);
-  // }
-  // pixels.show();
+  if (transition_completed) {
+    // transition was completed
+    // add fluctuation
+
+    switch (pixel_srv.noise_chr.value()) {
+      case FLUCTUATION_TIME:
+        static float p = 0.5f + 0.5f * std::sin(2.0f * M_PI * 1.0 * clock_sec);
+        led_strip::dissolveEasing(current_colors, transited_colors,
+                                  fluctuation_colors, transition_weights,
+                                  NUM_PIXELS, p);
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  for (uint16_t i = 0; i < pixels.numPixels(); i++) {
+    pixels.setPixelColor(i, color::hsbhexTohex(current_colors[i]));
+  }
+  pixels.show();
   delay(DELAY_LED);
   //         case PRESET_ACT_ACC: {  // imu acc
   //           float x = my_imu.readFloatAccelX();
@@ -237,8 +256,8 @@ void loop() {
   //           cc = (cx << 16 | cy << 8 | cz);
 
   //           if (progress < duration) {
-  //             gradientColor(goal_colors, NUM_PIXELS, cc, cc);
-  //             dissolveUpdate(current_colors, start_colors, goal_colors,
+  //             gradientColor(transited_colors, NUM_PIXELS, cc, cc);
+  //             dissolveUpdate(current_colors, start_colors, transited_colors,
   //                            NUM_PIXELS, progress, duration);
   //           } else {
   //             gradientColor(current_colors, NUM_PIXELS, cc, cc);
@@ -249,9 +268,10 @@ void loop() {
 
   //         case PRESET_ACT_RAINBOW: {
   //           duration = 30;
-  //           rainbowColor(goal_colors, NUM_PIXELS);
+  //           rainbowColor(transited_colors, NUM_PIXELS);
   //           completed =
-  //               dissolveUpdate(current_colors, start_colors, goal_colors,
+  //               dissolveUpdate(current_colors, start_colors,
+  //               transited_colors,
   //                              NUM_PIXELS, progress, duration);
   //         } break;
 
@@ -279,4 +299,5 @@ void loop() {
   //   Serial.println("Disconnection");
   //   digitalWrite(LEDG, HIGH);
   // }
+  loop_count++;
 }
