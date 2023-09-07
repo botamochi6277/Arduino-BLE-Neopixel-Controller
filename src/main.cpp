@@ -39,6 +39,8 @@ uint32_t current_colors[NUM_PIXELS];
 
 uint32_t start_colors[NUM_PIXELS];
 uint32_t transited_colors[NUM_PIXELS];
+uint32_t cache_colors[NUM_PIXELS];
+
 uint32_t palette[4];
 float transition_weights[NUM_PIXELS];
 
@@ -128,7 +130,7 @@ void setup() {
 
   // temporal
   for (size_t i = 0; i < NUM_PIXELS; i++) {
-    fluctuation_colors[i] = 0xFFFFFFFF;
+    fluctuation_colors[i] = color::hsbToHsbhex(0x0000, 0xff, 0xff);
   }
 
   loop_count = 0;
@@ -224,10 +226,10 @@ void loop() {
   if (transition_completed) {
     // transition was completed
     // add fluctuation
-
+    float p;
     switch (pixel_srv.noise_chr.value()) {
       case FLUCTUATION_TIME:
-        static float p = 0.5f + 0.5f * std::sin(2.0f * M_PI * 1.0 * clock_sec);
+        p = 0.5f + 0.5f * std::sin(2.0f * M_PI * 10.0f * clock_sec);
         led_strip::dissolveEasing(current_colors, transited_colors,
                                   fluctuation_colors, transition_weights,
                                   NUM_PIXELS, p);

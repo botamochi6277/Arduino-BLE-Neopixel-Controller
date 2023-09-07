@@ -95,18 +95,22 @@ bool slideEasing(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
 
   uint16_t neck_idx = 0U;
   if (!is_backward) {
-    for (uint16_t index = num_pixels - 1; 0 <= index; index--) {
+    uint16_t reversed_idx = num_pixels - 1;
+    for (uint16_t index = 0; index < num_pixels; index++) {
+      reversed_idx = num_pixels - 1 - index;
       if (weights[index] < 0.99) {
-        shifted_goal_colors[index] = hsb_to[num_pixels - 1];
+        shifted_goal_colors[reversed_idx] = hsb_to[num_pixels - 1];
       } else {
         neck_idx = index;
         break;
       }
     }
-    for (uint16_t index = neck_idx; 0 <= index; index--) {
-      shifted_goal_colors[index] = hsb_to[num_pixels - 1 + index - neck_idx];
+    for (uint16_t index = neck_idx; index < num_pixels; index++) {
+      reversed_idx = num_pixels - 1 - index;
+      shifted_goal_colors[index] = hsb_to[num_pixels - 1 + neck_idx - index];
     }
   } else {
+    // backward
     for (uint16_t index = 0; index < num_pixels; index++) {
       if (weights[index] < 0.99) {
         shifted_goal_colors[index] = hsb_to[0];
