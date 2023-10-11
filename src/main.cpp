@@ -6,16 +6,21 @@
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 #include <ArduinoBLE.h>
-
+#ifdef SEEED_XIAO_NRF52840_SENSE
 #include "LSM6DS3.h"  // IMU chip
+#endif
 #include "Wire.h"
 #include "color_utils.hpp"
 #include "neopixel_service.hpp"
 #include "preset.hpp"
 #include "strip.hpp"
 
-// Neopixel variables
+// NeoPixel variables
+#ifdef ARDUINO_M5Stack_ATOM
+#define PIXEL_PIN 32  // MOSI
+#else
 #define PIXEL_PIN 7  // MOSI
+#endif
 #define NUM_PIXELS 45
 #define DELAY_MS 500
 
@@ -49,8 +54,10 @@ uint32_t fluctuation_colors[NUM_PIXELS];
 
 Adafruit_NeoPixel pixels(NUM_PIXELS, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
+#ifdef SEEED_XIAO_NRF52840_SENSE
 // Create a instance of class LSM6DS3
 LSM6DS3 my_imu(I2C_MODE, 0x6A);  // I2C device address 0x6A
+#endif
 
 void setup() {
   // build-in leds
@@ -75,10 +82,11 @@ void setup() {
   }
 
   Serial.println("NeoPixel BLE waking");
-
+#ifdef SEEED_XIAO_NRF52840_SENSE
   if (my_imu.begin() != 0) {
     Serial.println("IMU error");
   }
+#endif
 
   // custom services and characteristics can be added as well
   // begin initialization

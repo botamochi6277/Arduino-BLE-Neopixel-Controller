@@ -21,5 +21,5 @@
 
 // custom
 #define BLE_GATT_CPF_UNIT_RGB 0x27F0  // rgb
-#define BLE_GATT_CPF_UNIT_HSB 0x27F1  // rgb
+#define BLE_GATT_CPF_UNIT_HSB 0x27F1  // hsb
 #endif
