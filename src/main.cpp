@@ -21,7 +21,7 @@
 #else
 #define PIXEL_PIN 7  // MOSI
 #endif
-#define NUM_PIXELS 45
+#define NUM_PIXELS 31
 #define DELAY_MS 500
 
 #define DELAY_LED 100
@@ -52,6 +52,11 @@ float transition_weights[NUM_PIXELS];
 // FLUCTUATION_TIME
 uint32_t fluctuation_colors[NUM_PIXELS];
 
+uint8_t red_buff;
+uint8_t green_buff;
+uint8_t blue_buff;
+uint32_t color_buff;
+
 Adafruit_NeoPixel pixels(NUM_PIXELS, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
 #ifdef SEEED_XIAO_NRF52840_SENSE
@@ -74,7 +79,7 @@ void setup() {
 
   Serial.begin(115200);
 
-  for (size_t i = 0; i < 100; i++) {
+  for (size_t i = 0; i < 10; i++) {
     if (Serial) {
       break;
     }
@@ -119,8 +124,8 @@ void setup() {
   pixel_srv.num_pixels_chr.writeValue(NUM_PIXELS);
   pixel_srv.num_colors_chr.writeValue(2U);
   pixel_srv.transition_chr.writeValue(TRANSITION_DISSOLVE);
-  pixel_srv.color01_chr.writeValue(color::hsbToHsbhex(0xff00, 0xff, 0xff));
-  pixel_srv.color02_chr.writeValue(color::hsbToHsbhex(128U * 255U, 255U, 255U));
+  pixel_srv.color01_chr.writeValue(color::hsbToHsbhex(0x00, 0xff, 0xff));
+  pixel_srv.color02_chr.writeValue(color::hsbToHsbhex(0xffff, 255U, 255U));
 
   digitalWrite(PIXEL_PIN, LOW);
   pixels.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
@@ -234,7 +239,7 @@ void loop() {
   if (transition_completed) {
     // transition was completed
     // add fluctuation
-    float p;
+    float p;  // cache, 0--1.0
     switch (pixel_srv.noise_chr.value()) {
       case FLUCTUATION_TIME:
         p = 0.5f + 0.5f * std::sin(2.0f * M_PI * 10.0f * clock_sec);
@@ -242,8 +247,21 @@ void loop() {
                                   fluctuation_colors, transition_weights,
                                   NUM_PIXELS, p);
         break;
+      case FLUCTUATION_ACC:
+#ifdef SEEED_XIAO_NRF52840_SENSE
+        red_buff = 255 * abs(my_imu.readFloatAccelX() / 2.0f);
+        green_buff = 255 * abs(my_imu.readFloatAccelY() / 2.0f);
+        blue_buff = 255 * abs(my_imu.readFloatAccelZ() / 2.0f);
 
+        color_buff = (red_buff << 16 | green_buff << 8 | blue_buff);
+        led_strip::fill(fluctuation_colors, NUM_PIXELS, color_buff);
+        led_strip::dissolveEasing(current_colors, transited_colors,
+                                  fluctuation_colors, transition_weights,
+                                  NUM_PIXELS, 1.0);
+#endif
+        break;
       default:
+        // 0 is off
         break;
     }
   }
@@ -253,61 +271,5 @@ void loop() {
   }
   pixels.show();
   delay(DELAY_LED);
-  //         case PRESET_ACT_ACC: {  // imu acc
-  //           float x = my_imu.readFloatAccelX();
-  //           float y = my_imu.readFloatAccelY();
-  //           float z = my_imu.readFloatAccelZ();
-
-  //           duration = 10;
-
-  //           unsigned int cx = 255 * abs(x / 2.0f);
-  //           unsigned int cy = 255 * abs(y / 2.0f);
-  //           unsigned int cz = 255 * abs(z / 2.0f);
-  //           cc = (cx << 16 | cy << 8 | cz);
-
-  //           if (progress < duration) {
-  //             gradientColor(transited_colors, NUM_PIXELS, cc, cc);
-  //             dissolveUpdate(current_colors, start_colors, transited_colors,
-  //                            NUM_PIXELS, progress, duration);
-  //           } else {
-  //             gradientColor(current_colors, NUM_PIXELS, cc, cc);
-  //           }
-  //         }
-
-  //         break;
-
-  //         case PRESET_ACT_RAINBOW: {
-  //           duration = 30;
-  //           rainbowColor(transited_colors, NUM_PIXELS);
-  //           completed =
-  //               dissolveUpdate(current_colors, start_colors,
-  //               transited_colors,
-  //                              NUM_PIXELS, progress, duration);
-  //         } break;
-
-  //         default:
-  //           break;
-  //       }
-
-  //       // apply current color
-  //       for (int i = 0; i < pixels.numPixels(); i++) {
-  //         uint32_t c = current_colors[i];
-  //         pixels.setPixelColor(i, c);
-  //       }
-  //       pixels.show();
-
-  //       progress += 1;
-
-  //       if (completed) {
-  //         sprintf(message, "0x%04x completed (%04d frames)", mode, progress);
-  //         Serial.println(message);
-  //       }
-  //     }
-
-  //     delay(DELAY_LED);
-  //   }
-  //   Serial.println("Disconnection");
-  //   digitalWrite(LEDG, HIGH);
-  // }
   loop_count++;
 }

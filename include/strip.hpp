@@ -6,6 +6,13 @@
 #include "color_utils.hpp"
 
 namespace led_strip {
+
+void fill(uint32_t hsb_colors[], uint16_t num_pixels, uint32_t color) {
+  for (uint16_t i = 0; i < num_pixels; i++) {
+    hsb_colors[i] = color;
+  }
+}
+
 void blend(uint32_t hsb_colors[], uint32_t palette_hsb[], uint16_t num_pixels,
            uint8_t palette_size = 2, uint8_t blend_type = 0) {
   if (palette_size == 0) {
