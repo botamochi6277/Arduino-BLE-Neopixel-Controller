@@ -21,7 +21,7 @@
 #else
 #define PIXEL_PIN 7  // MOSI
 #endif
-#define NUM_PIXELS 31
+#define NUM_PIXELS 45
 #define DELAY_MS 500
 
 #define DELAY_LED 100
@@ -87,11 +87,6 @@ void setup() {
   }
 
   Serial.println("NeoPixel BLE waking");
-#ifdef SEEED_XIAO_NRF52840_SENSE
-  if (my_imu.begin() != 0) {
-    Serial.println("IMU error");
-  }
-#endif
 
   // custom services and characteristics can be added as well
   // begin initialization
@@ -120,12 +115,22 @@ void setup() {
   // start advertising
   BLE.advertise();
 
+#ifdef SEEED_XIAO_NRF52840_SENSE
+  if (my_imu.begin() != 0) {
+    Serial.println("IMU error");
+    pixel_srv.imu_available_chr.writeValue(0);
+  } else {
+    pixel_srv.imu_available_chr.writeValue(1);
+  }
+#endif
+
   // set the initial value for the characteristic:
   pixel_srv.num_pixels_chr.writeValue(NUM_PIXELS);
   pixel_srv.num_colors_chr.writeValue(2U);
   pixel_srv.transition_chr.writeValue(TRANSITION_DISSOLVE);
   pixel_srv.color01_chr.writeValue(color::hsbToHsbhex(0x00, 0xff, 0xff));
   pixel_srv.color02_chr.writeValue(color::hsbToHsbhex(0xffff, 255U, 255U));
+  pixel_srv.color04_chr.writeValue(color::hsbToHsbhex(0xffff, 255U, 255U));
 
   digitalWrite(PIXEL_PIN, LOW);
   pixels.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
@@ -143,7 +148,7 @@ void setup() {
 
   // temporal
   for (size_t i = 0; i < NUM_PIXELS; i++) {
-    fluctuation_colors[i] = color::hsbToHsbhex(0x0000, 0xff, 0xff);
+    fluctuation_colors[i] = palette[3];
   }
 
   loop_count = 0;
@@ -186,6 +191,10 @@ void loop() {
     Serial.println(message);
 
     transition_completed = false;
+
+    for (size_t i = 0; i < NUM_PIXELS; i++) {
+      fluctuation_colors[i] = palette[3];
+    }
 
     for (size_t i = 0; i < NUM_PIXELS; i++) {
       start_colors[i] = current_colors[i];
@@ -240,24 +249,43 @@ void loop() {
     // transition was completed
     // add fluctuation
     float p;  // cache, 0--1.0
-    switch (pixel_srv.noise_chr.value()) {
+    uint8_t color_idx;
+    switch (pixel_srv.fluctuation_chr.value()) {
       case FLUCTUATION_TIME:
-        p = 0.5f + 0.5f * std::sin(2.0f * M_PI * 10.0f * clock_sec);
+        p = 0.5f + 0.5f * std::sin(2.0f * M_PI * 0.1f * clock_sec);
         led_strip::dissolveEasing(current_colors, transited_colors,
                                   fluctuation_colors, transition_weights,
                                   NUM_PIXELS, p);
         break;
-      case FLUCTUATION_ACC:
+      case FLUCTUATION_PERIODIC:
 #ifdef SEEED_XIAO_NRF52840_SENSE
-        red_buff = 255 * abs(my_imu.readFloatAccelX() / 2.0f);
-        green_buff = 255 * abs(my_imu.readFloatAccelY() / 2.0f);
-        blue_buff = 255 * abs(my_imu.readFloatAccelZ() / 2.0f);
+        // hsb
+        color_idx =
+            easing::argmax3(my_imu.readFloatAccelX(), my_imu.readFloatAccelY(),
+                            my_imu.readFloatAccelZ());
+        if (color_idx == 0) {
+          // x dominant
+          color_buff = color::hsbToHsbhex(0x00, 0xff, 0xff);
+          p = easing::remap(abs(my_imu.readFloatAccelX()), 0.0f, 2.0f, 0.0f,
+                            1.0f, true);
+        }
+        if (color_idx == 1) {
+          // y dominant
+          color_buff = color::hsbToHsbhex(64U, 0xff, 0xff);
+          p = easing::remap(abs(my_imu.readFloatAccelY()), 0.0f, 2.0f, 0.0f,
+                            1.0f, true);
+        }
 
-        color_buff = (red_buff << 16 | green_buff << 8 | blue_buff);
+        if (color_idx == 2) {
+          // z dominant
+          color_buff = color::hsbToHsbhex(128U, 0xff, 0xff);
+          p = easing::remap(abs(my_imu.readFloatAccelZ()), 0.0f, 2.0f, 0.0f,
+                            1.0f, true);
+        }
         led_strip::fill(fluctuation_colors, NUM_PIXELS, color_buff);
         led_strip::dissolveEasing(current_colors, transited_colors,
                                   fluctuation_colors, transition_weights,
-                                  NUM_PIXELS, 1.0);
+                                  NUM_PIXELS, p);
 #endif
         break;
       default:

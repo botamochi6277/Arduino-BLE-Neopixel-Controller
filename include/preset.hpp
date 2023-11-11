@@ -18,7 +18,7 @@
 
 // fluctuation code
 #define FLUCTUATION_TIME 0x01
-#define FLUCTUATION_ACC 0x02
+#define FLUCTUATION_PERIODIC 0x02
 
 #define PRESET_ACT_ACC 0x4
 #define PRESET_ACT_RAINBOW 0x5

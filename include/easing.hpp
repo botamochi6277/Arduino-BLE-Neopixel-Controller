@@ -4,6 +4,19 @@
 
 // https://easings.net
 namespace easing {
+
+template <typename T>
+uint8_t argmax3(T v0, T v1, T v2) {
+  uint8_t i = 0;
+  if (v0 < v1) {
+    i = 1;
+  }
+  if ((v0 < v2) && (v1 < v2)) {
+    i = 2;
+  }
+  return i;
+}
+
 template <typename T>
 T remap(T x, T in_min, T in_max, T out_min, T out_max, bool chip = false) {
   if (chip) {

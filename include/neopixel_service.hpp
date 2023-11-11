@@ -35,7 +35,10 @@ class NeopixelService : public BLEService {
                                   0x00};
 
  public:
+  // general
   BLEUnsignedLongCharacteristic timer_chr;
+
+  // colors
   BLEUnsignedCharCharacteristic num_pixels_chr;
   BLEUnsignedCharCharacteristic num_colors_chr;
   BLEUnsignedIntCharacteristic color01_chr;
@@ -43,9 +46,11 @@ class NeopixelService : public BLEService {
   BLEUnsignedIntCharacteristic color03_chr;
   BLEUnsignedIntCharacteristic color04_chr;
 
-  BLEUnsignedCharCharacteristic transition_chr;  // dissolve, slide, etc.
-  BLEUnsignedCharCharacteristic noise_chr;       // (acc,time)
-  BLEUnsignedCharCharacteristic blending_chr;    // gradation, cycle
+  BLEUnsignedCharCharacteristic blending_chr;     // gradation, cycle
+  BLEUnsignedCharCharacteristic fluctuation_chr;  // (acc,time)
+  BLEUnsignedCharCharacteristic transition_chr;   // dissolve, slide, etc.
+
+  BLEUnsignedCharCharacteristic imu_available_chr;
 
   NeopixelService(/* args */);
   ~NeopixelService();
@@ -64,7 +69,9 @@ NeopixelService::NeopixelService()
       blending_chr("19B10008-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
       transition_chr("19B10009-E8F2-537E-4F6C-D104768A1214",
                      BLERead | BLEWrite),
-      noise_chr("19B10010-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite) {
+      fluctuation_chr("19B10010-E8F2-537E-4F6C-D104768A1214",
+                      BLERead | BLEWrite),
+      imu_available_chr("19B10011-E8F2-537E-4F6C-D104768A1214", BLERead) {
   // add characteristics to service
   this->addCharacteristic(this->timer_chr);
   this->addCharacteristic(this->num_pixels_chr);
@@ -75,7 +82,8 @@ NeopixelService::NeopixelService()
   this->addCharacteristic(this->color04_chr);
   this->addCharacteristic(this->blending_chr);
   this->addCharacteristic(this->transition_chr);
-  this->addCharacteristic(this->noise_chr);
+  this->addCharacteristic(this->fluctuation_chr);
+  this->addCharacteristic(this->imu_available_chr);
 
   // User Description
   BLEDescriptor timer_descriptor("2901", "timer_ms");
@@ -99,8 +107,11 @@ NeopixelService::NeopixelService()
   this->blending_chr.addDescriptor(blending_descriptor);
   BLEDescriptor transition_descriptor("2901", "transition type");
   this->transition_chr.addDescriptor(transition_descriptor);
-  BLEDescriptor noise_descriptor("2901", "noise");
-  this->noise_chr.addDescriptor(noise_descriptor);
+  BLEDescriptor fluctuation_descriptor("2901", "fluctuation");
+  this->fluctuation_chr.addDescriptor(fluctuation_descriptor);
+
+  BLEDescriptor imu_available_descriptor("2901", "imu available");
+  this->imu_available_chr.addDescriptor(imu_available_descriptor);
 
   // Format Description
   BLEDescriptor millisec_descriptor("2904", this->msec_format_, 7);
@@ -124,8 +135,10 @@ NeopixelService::NeopixelService()
   this->transition_chr.addDescriptor(trans_unitless_descriptor);
   BLEDescriptor blending_unitless_descriptor("2904", this->cmd_format_, 7);
   this->blending_chr.addDescriptor(blending_unitless_descriptor);
-  BLEDescriptor noise_unitless_descriptor("2904", this->cmd_format_, 7);
-  this->noise_chr.addDescriptor(noise_unitless_descriptor);
+  BLEDescriptor fluctuation_unitless_descriptor("2904", this->cmd_format_, 7);
+  this->fluctuation_chr.addDescriptor(fluctuation_unitless_descriptor);
+  BLEDescriptor imu_unitless_descriptor("2904", this->cmd_format_, 7);
+  this->imu_available_chr.addDescriptor(imu_unitless_descriptor);
 }
 
 NeopixelService::~NeopixelService(){};
