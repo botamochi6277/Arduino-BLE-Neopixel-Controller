@@ -40,77 +40,80 @@ c2-->neopixels
 ## Service Profile
 
 ```yml
-name: NeopixelService
-uuid: 19B10000-E8F2-537E-4F6C-D104768A1214
+---
+name: "NeopixelService"
+uuid: "19B10000-E8F2-537E-4F6C-D104768A1214"
 characteristics:
-  - name: timer_chr
-    uuid: 19B10001-E8F2-537E-4F6C-D104768A1214
-    data_type: UnsignedLong
+  - name: "timer_chr"
+    uuid: "19B10001-E8F2-537E-4F6C-D104768A1214"
+    data_type: "UnsignedLong"
     properties:
-      - Read
-      - Notify
-  - name: num_pixels_chr
-    uuid: 19B10002-E8F2-537E-4F6C-D104768A1214
-    data_type: UnsignedChar
+      - "Read"
+      - "Notify"
+  - name: "imu_available_chr"
+    uuid: "19B10002-E8F2-537E-4F6C-D104768A1214"
+    data_type: "UnsignedChar"
     properties:
-      - Read
-      - Notify
-  - name: num_colors_chr
-    uuid: 19B10003-E8F2-537E-4F6C-D104768A1214
-    data_type: UnsignedChar
+      - "Read"
+  - name: "num_pixels_chr"
+    uuid: "19B10011-E8F2-537E-4F6C-D104768A1214"
+    data_type: "UnsignedChar"
     properties:
-      - Read
-      - Write
-      - Notify
-  - name: color01_chr
-    uuid: 19B10004-E8F2-537E-4F6C-D104768A1214
-    data_type: UnsignedInt
+      - "Read"
+  - name: "brightness_chr"
+    uuid: "19B10012-E8F2-537E-4F6C-D104768A1214"
+    data_type: "UnsignedChar"
     properties:
-      - Read
-      - Write
-      - Notify
-  - name: color02_chr
-    uuid: 19B10005-E8F2-537E-4F6C-D104768A1214
-    data_type: UnsignedInt
+      - "Read"
+      - "Write"
+  - name: "num_colors_chr"
+    uuid: "19B10021-E8F2-537E-4F6C-D104768A1214"
+    data_type: "UnsignedChar"
     properties:
-      - Read
-      - Write
-      - Notify
-  - name: color03_chr
-    uuid: 19B10006-E8F2-537E-4F6C-D104768A1214
-    data_type: UnsignedInt
+      - "Read"
+      - "Write"
+  - name: "color01_chr"
+    uuid: "19B10022-E8F2-537E-4F6C-D104768A1214"
+    data_type: "UnsignedInt"
     properties:
-      - Read
-      - Write
-      - Notify
-  - name: color04_chr
-    uuid: 19B10007-E8F2-537E-4F6C-D104768A1214
-    data_type: UnsignedInt
+      - "Read"
+      - "Write"
+  - name: "color02_chr"
+    uuid: "19B10023-E8F2-537E-4F6C-D104768A1214"
+    data_type: "UnsignedInt"
     properties:
-      - Read
-      - Write
-      - Notify
-  - name: transition_chr
-    uuid: 19B10009-E8F2-537E-4F6C-D104768A1214
-    data_type: UnsignedChar
+      - "Read"
+      - "Write"
+  - name: "color03_chr"
+    uuid: "19B10024-E8F2-537E-4F6C-D104768A1214"
+    data_type: "UnsignedInt"
     properties:
-      - Read
-      - Write
-      - Notify
-  - name: noise_chr
-    uuid: 19B10010-E8F2-537E-4F6C-D104768A1214
-    data_type: UnsignedChar
+      - "Read"
+      - "Write"
+  - name: "color04_chr"
+    uuid: "19B10025-E8F2-537E-4F6C-D104768A1214"
+    data_type: "UnsignedInt"
     properties:
-      - Read
-      - Write
-      - Notify
-  - name: blending_chr
-    uuid: 19B10008-E8F2-537E-4F6C-D104768A1214
-    data_type: UnsignedChar
+      - "Read"
+      - "Write"
+  - name: "blending_chr"
+    uuid: "19B10026-E8F2-537E-4F6C-D104768A1214"
+    data_type: "UnsignedChar"
     properties:
-      - Read
-      - Write
-      - Notify
+      - "Read"
+      - "Write"
+  - name: "fluctuation_chr"
+    uuid: "19B10028-E8F2-537E-4F6C-D104768A1214"
+    data_type: "UnsignedChar"
+    properties:
+      - "Read"
+      - "Write"
+  - name: "transition_chr"
+    uuid: "19B10027-E8F2-537E-4F6C-D104768A1214"
+    data_type: "UnsignedChar"
+    properties:
+      - "Read"
+      - "Write"
 ```
 
 ## Add XIAO BLE to PlatformIO

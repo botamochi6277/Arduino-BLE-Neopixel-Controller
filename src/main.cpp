@@ -125,6 +125,7 @@ void setup() {
 #endif
 
   // set the initial value for the characteristic:
+  pixel_srv.brightness_chr.writeValue(20);
   pixel_srv.num_pixels_chr.writeValue(NUM_PIXELS);
   pixel_srv.num_colors_chr.writeValue(2U);
   pixel_srv.transition_chr.writeValue(TRANSITION_DISSOLVE);
@@ -163,6 +164,9 @@ void loop() {
   digitalWrite(LEDG, !digitalRead(LEDG));  // heartbeats
 #endif
   BLE.poll();
+  if (pixel_srv.brightness_chr.written()) {
+    pixels.setBrightness(pixel_srv.brightness_chr.value());
+  }
   // color parameter was changed, updating static colors
   if (pixel_srv.color01_chr.written() || pixel_srv.color02_chr.written() ||
       pixel_srv.color03_chr.written() || pixel_srv.color04_chr.written() ||
@@ -266,20 +270,20 @@ void loop() {
         if (color_idx == 0) {
           // x dominant
           color_buff = color::hsbToHsbhex(0x00, 0xff, 0xff);
-          p = easing::remap(abs(my_imu.readFloatAccelX()), 0.0f, 2.0f, 0.0f,
+          p = easing::remap(abs(my_imu.readFloatAccelX()), 0.0f, 1.5f, 0.0f,
                             1.0f, true);
         }
         if (color_idx == 1) {
           // y dominant
           color_buff = color::hsbToHsbhex(64U, 0xff, 0xff);
-          p = easing::remap(abs(my_imu.readFloatAccelY()), 0.0f, 2.0f, 0.0f,
+          p = easing::remap(abs(my_imu.readFloatAccelY()), 0.0f, 1.5f, 0.0f,
                             1.0f, true);
         }
 
         if (color_idx == 2) {
           // z dominant
           color_buff = color::hsbToHsbhex(128U, 0xff, 0xff);
-          p = easing::remap(abs(my_imu.readFloatAccelZ()), 0.0f, 2.0f, 0.0f,
+          p = easing::remap(abs(my_imu.readFloatAccelZ()), 0.0f, 1.5f, 0.0f,
                             1.0f, true);
         }
         led_strip::fill(fluctuation_colors, NUM_PIXELS, color_buff);
