@@ -9,7 +9,7 @@
 
 namespace ble {
 
-class NeopixelService : public BLEService {
+class NeoPixelService : public BLEService {
  private:
   const uint8_t msec_format_[7] = {
       BLE_GATT_CPF_FORMAT_UINT64,
@@ -54,11 +54,11 @@ class NeopixelService : public BLEService {
   BLEUnsignedCharCharacteristic fluctuation_chr;  // (acc,time)
   BLEUnsignedCharCharacteristic transition_chr;   // dissolve, slide, etc.
 
-  NeopixelService(/* args */);
-  ~NeopixelService();
+  NeoPixelService(/* args */);
+  ~NeoPixelService();
 };
 
-NeopixelService::NeopixelService()
+NeoPixelService::NeoPixelService()
     : BLEService("19B10000-E8F2-537E-4F6C-D104768A1214"),
       timer_chr("19B10001-E8F2-537E-4F6C-D104768A1214", BLERead | BLENotify),
       imu_available_chr("19B10002-E8F2-537E-4F6C-D104768A1214", BLERead),
@@ -155,7 +155,7 @@ NeopixelService::NeopixelService()
   this->fluctuation_chr.addDescriptor(fluctuation_unitless_descriptor);
 }
 
-NeopixelService::~NeopixelService(){};
+NeoPixelService::~NeoPixelService(){};
 
 }  // namespace ble
 

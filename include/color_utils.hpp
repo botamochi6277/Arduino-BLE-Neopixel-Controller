@@ -8,6 +8,63 @@
 #include "easing.hpp"
 namespace color {
 
+class PixelUnit {
+ private:
+  float red_;  // 0.0 -- 1.0
+  float green_;
+  float blue_;
+  float position_;
+
+ public:
+  PixelUnit();
+  PixelUnit(float red, float green, float blue);
+  PixelUnit(unsigned int hexcolor);
+  void setColor(float red, float green, float blue);
+  void setColor(unsigned int hexcolor);
+  void blendFromAnchors(PixelUnit &anchor1, PixelUnit &anchor2);
+  float red();
+  float green();
+  float blue();
+  float position();
+};
+
+PixelUnit::PixelUnit() { this->setColor(0, 0, 0); }
+PixelUnit::PixelUnit(float red, float green, float blue) {
+  this->setColor(red, green, blue);
+}
+PixelUnit::PixelUnit(unsigned int hexcolor) { this->setColor(hexcolor); }
+void PixelUnit::setColor(float red, float green, float blue) {
+  this->red_ = red;
+  this->green_ = green;
+  this->blue_ = blue;
+}
+
+void PixelUnit::setColor(unsigned int hexcolor) {
+  this->red_ = ((0x00FF0000 & hexcolor) >> 16) / 255.0f;
+  this->green_ = ((0x0000FF00 & hexcolor) >> 8) / 255.0f;
+  this->blue_ = ((0x000000FF & hexcolor)) / 255.0f;
+}
+
+float PixelUnit::red() { return this->red_; }
+float PixelUnit::green() { return this->green_; }
+float PixelUnit::blue() { return this->blue_; }
+float PixelUnit::position() { return this->position_; }
+
+void PixelUnit::blendFromAnchors(PixelUnit &anchor1, PixelUnit &anchor2) {
+  float distance1 = abs(anchor1.position() - this->position_);
+  float distance2 = abs(anchor2.position() - this->position_);
+  float score1 = 1.0f / (distance1 + 1e-9f);
+  float score2 = 1.0f / (distance2 + 1e-9f);
+  float weight1 = score1 / (score1 + score2);
+  float weight2 = score2 / (score1 + score2);
+
+  // blend with weight
+  // rgb blending
+  this->red_ = weight1 * anchor1.red() + weight2 * anchor2.red();
+  this->green_ = weight1 * anchor1.green() + weight2 * anchor2.green();
+  this->blue_ = weight1 * anchor1.blue() + weight2 * anchor2.blue();
+}
+
 void hexToRgbw(uint32_t color, uint8_t &r, uint8_t &g, uint8_t &b, uint8_t &w) {
   // 0x FF 00 FF 00
   w = (0xFF000000 & color) >> 24;
