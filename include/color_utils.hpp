@@ -8,6 +8,9 @@
 #include "easing.hpp"
 namespace color {
 
+void hueCycle(float &r, float &g, float &b, float time, float period,
+              float initial_phase);
+
 class PixelUnit {
  private:
   float red_;  // 0.0 -- 1.0
@@ -17,10 +20,12 @@ class PixelUnit {
 
  public:
   PixelUnit();
-  PixelUnit(float red, float green, float blue);
-  PixelUnit(unsigned int hexcolor);
+  PixelUnit(float red, float green, float blue, float position);
+  PixelUnit(unsigned int hexcolor, float position);
   void setColor(float red, float green, float blue);
   void setColor(unsigned int hexcolor);
+  void setHueCycle(float time, float period, float initial_phase);
+  void setPosition(float position);
   void blendFromAnchors(PixelUnit &anchor1, PixelUnit &anchor2);
   float red();
   float green();
@@ -28,11 +33,18 @@ class PixelUnit {
   float position();
 };
 
-PixelUnit::PixelUnit() { this->setColor(0, 0, 0); }
-PixelUnit::PixelUnit(float red, float green, float blue) {
-  this->setColor(red, green, blue);
+PixelUnit::PixelUnit() {
+  this->setColor(0.0f, 0.0f, 0.0f);
+  this->setPosition(0.0f);
 }
-PixelUnit::PixelUnit(unsigned int hexcolor) { this->setColor(hexcolor); }
+PixelUnit::PixelUnit(float red, float green, float blue, float position) {
+  this->setColor(red, green, blue);
+  this->setPosition(position);
+}
+PixelUnit::PixelUnit(unsigned int hexcolor, float position) {
+  this->setColor(hexcolor);
+  this->setPosition(position);
+}
 void PixelUnit::setColor(float red, float green, float blue) {
   this->red_ = red;
   this->green_ = green;
@@ -45,10 +57,15 @@ void PixelUnit::setColor(unsigned int hexcolor) {
   this->blue_ = ((0x000000FF & hexcolor)) / 255.0f;
 }
 
+void PixelUnit::setHueCycle(float time, float period, float initial_phase) {
+  hueCycle(this->red_, this->green_, this->blue_, time, period, initial_phase);
+}
+
 float PixelUnit::red() { return this->red_; }
 float PixelUnit::green() { return this->green_; }
 float PixelUnit::blue() { return this->blue_; }
 float PixelUnit::position() { return this->position_; }
+void PixelUnit::setPosition(float position) { this->position_ = position; }
 
 void PixelUnit::blendFromAnchors(PixelUnit &anchor1, PixelUnit &anchor2) {
   float distance1 = abs(anchor1.position() - this->position_);
@@ -63,6 +80,17 @@ void PixelUnit::blendFromAnchors(PixelUnit &anchor1, PixelUnit &anchor2) {
   this->red_ = weight1 * anchor1.red() + weight2 * anchor2.red();
   this->green_ = weight1 * anchor1.green() + weight2 * anchor2.green();
   this->blue_ = weight1 * anchor1.blue() + weight2 * anchor2.blue();
+}
+
+void hueCycle(float &r, float &g, float &b, float time, float period,
+              float initial_phase) {
+  // (1,0,0),(1,1,0),(0,0,1),(0,1,1),(0,0,1),(1,0,1)
+  // https://ja.wikipedia.org/wiki/カラーグラデーション#/media/ファイル:Gnuplot_HSV_gradient.png
+  float phase = 2.0f * M_PI * (time / period) + initial_phase - M_PI / 6.0f;
+  float a = 0.5773502691896258;  // 1/np.sqrt(3);
+  r = constrain(sinf(phase + 2.0f * M_PI / 3.0f) + 0.5f, 0.0f, 1.0f);
+  g = constrain(sinf(phase) + 0.5f, 0.0f, 1.0f);
+  b = constrain(sinf(phase - 2.0f * M_PI / 3.0f) + 0.5f, 0.0f, 1.0f);
 }
 
 void hexToRgbw(uint32_t color, uint8_t &r, uint8_t &g, uint8_t &b, uint8_t &w) {
