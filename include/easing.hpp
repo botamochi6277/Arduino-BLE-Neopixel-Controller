@@ -37,7 +37,7 @@ float hardSigmoid(float x, float duration = 1.0, float scale = 1.0) {
   } else if (0.0 <= x && x < duration) {
     return (scale / duration) * x;
   } else {
-    return 1.0;
+    return scale;
   }
 }
 

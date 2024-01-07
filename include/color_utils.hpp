@@ -11,6 +11,8 @@ namespace color {
 void hueCycle(float &r, float &g, float &b, float time, float period,
               float initial_phase);
 
+void heatColor(float &r, float &g, float &b, float temperature);
+
 class PixelUnit {
  private:
   float red_;  // 0.0 -- 1.0
@@ -25,6 +27,7 @@ class PixelUnit {
   void setColor(float red, float green, float blue);
   void setColor(unsigned int hexcolor);
   void setHueCycle(float time, float period, float initial_phase);
+  void setHeatColor(float temperature);
   void setPosition(float position);
   void blendFromAnchors(PixelUnit &anchor1, PixelUnit &anchor2);
   float red();
@@ -60,6 +63,9 @@ void PixelUnit::setColor(unsigned int hexcolor) {
 void PixelUnit::setHueCycle(float time, float period, float initial_phase) {
   hueCycle(this->red_, this->green_, this->blue_, time, period, initial_phase);
 }
+void PixelUnit::setHeatColor(float temperature) {
+  heatColor(this->red_, this->green_, this->blue_, temperature);
+}
 
 float PixelUnit::red() { return this->red_; }
 float PixelUnit::green() { return this->green_; }
@@ -91,6 +97,13 @@ void hueCycle(float &r, float &g, float &b, float time, float period,
   r = constrain(sinf(phase + 2.0f * M_PI / 3.0f) + 0.5f, 0.0f, 1.0f);
   g = constrain(sinf(phase) + 0.5f, 0.0f, 1.0f);
   b = constrain(sinf(phase - 2.0f * M_PI / 3.0f) + 0.5f, 0.0f, 1.0f);
+}
+
+void heatColor(float &r, float &g, float &b, float temperature) {
+  // https://ja.wikipedia.org/wiki/カラーグラデーション#/media/ファイル:P_hot.gif
+  r = easing::hardSigmoid(temperature, 0.333f, 1.0f);
+  g = easing::hardSigmoid(temperature - 0.333f, 0.333f, 1.0f);
+  b = easing::hardSigmoid(temperature - 0.666f, 0.333f, 1.0f);
 }
 
 void hexToRgbw(uint32_t color, uint8_t &r, uint8_t &g, uint8_t &b, uint8_t &w) {
