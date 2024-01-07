@@ -3,6 +3,9 @@
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 
+#ifndef NUM_PIXELS
+#define NUM_PIXELS 45
+#endif
 #include "color_utils.hpp"
 
 namespace led_strip {
@@ -162,6 +165,61 @@ bool slideEasing(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
 //     colors[i] = color::hsbToHex(hue, s, v);
 //   }
 // }
+
+class PixelManager {
+ private:
+  //  anchor points
+  uint32_t current_colors[NUM_PIXELS];  // new color buffer
+  uint32_t start_colors[NUM_PIXELS];
+  uint32_t transited_colors[NUM_PIXELS];
+  uint32_t cache_colors[NUM_PIXELS];
+  uint32_t palette[4];
+  float transition_weights[NUM_PIXELS];
+  uint32_t fluctuation_colors[NUM_PIXELS];
+
+  float transition_start_sec;
+
+ public:
+  PixelManager();
+  PixelManager(float pitch);
+  color::PixelUnit pixel_units[NUM_PIXELS];
+
+  void setPaletteColor(uint8_t index, unsigned int color);
+  unsigned int getPaletteColor(uint8_t index);
+
+  void setCurrentColor(uint8_t index, unsigned int color);
+  void setFluctuationColor(uint8_t index, unsigned int color);
+  void blend(uint32_t hsb_colors[], uint32_t palette_hsb[], uint16_t num_pixels,
+             uint8_t palette_size = 2, uint8_t blend_type = 0);
+};
+
+PixelManager::PixelManager() {
+  for (size_t i = 0; i < NUM_PIXELS; i++) {
+    this->pixel_units[i].setPosition(i * 1.0f / (NUM_PIXELS - 1));
+  }
+}
+
+PixelManager::PixelManager(float pitch) {
+  for (size_t i = 0; i < NUM_PIXELS; i++) {
+    this->pixel_units[i].setPosition(i * pitch);
+  }
+}
+
+void PixelManager::setPaletteColor(uint8_t index, unsigned int color) {
+  this->palette[index] = color;
+}
+
+unsigned int PixelManager::getPaletteColor(uint8_t index) {
+  return this->palette[index];
+}
+
+void PixelManager::setCurrentColor(uint8_t index, unsigned int color) {
+  this->current_colors[index] = color;
+}
+void PixelManager::setFluctuationColor(uint8_t index, unsigned int color) {
+  this->fluctuation_colors[index] = color;
+}
+
 };  // namespace led_strip
 
 #endif

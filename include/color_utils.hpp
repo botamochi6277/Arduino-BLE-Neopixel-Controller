@@ -34,6 +34,7 @@ class PixelUnit {
   float green();
   float blue();
   float position();
+  unsigned int hex();
 };
 
 PixelUnit::PixelUnit() {
@@ -70,6 +71,11 @@ void PixelUnit::setHeatColor(float temperature) {
 float PixelUnit::red() { return this->red_; }
 float PixelUnit::green() { return this->green_; }
 float PixelUnit::blue() { return this->blue_; }
+unsigned int PixelUnit::hex() {
+  return (static_cast<uint8_t>(255.0f * this->red_) << 16) |
+         (static_cast<uint8_t>(255.0f * this->green_) << 8) |
+         (static_cast<uint8_t>(255.0f * this->blue_));
+}
 float PixelUnit::position() { return this->position_; }
 void PixelUnit::setPosition(float position) { this->position_ = position; }
 
