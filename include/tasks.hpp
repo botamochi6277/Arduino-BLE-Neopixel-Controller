@@ -36,11 +36,22 @@ void updateColorCache(led_strip::PixelManager &manager,
   }
 }
 
+enum class PixelMode : unsigned char {
+  HueRainbow,
+  GyroHeatmap,
+};
+
 void setRainbow(led_strip::PixelManager &manager, Adafruit_NeoPixel &pixels,
                 float time, float period) {
   for (size_t i = 0; i < NUM_PIXELS; i++) {
     manager.pixel_units[i].setHueCycle(time, period,
                                        i * (2.0f * M_PI / (NUM_PIXELS - 1)));
+  }
+}
+
+void setHeatColors(led_strip::PixelManager &manager, float temperature) {
+  for (uint16_t i = 0; i < NUM_PIXELS; i++) {
+    manager.pixel_units[i].setHeatColor(temperature);
   }
 }
 
@@ -51,7 +62,8 @@ void setPixelColors(led_strip::PixelManager &manager,
   }
 }
 
-// void updatePixelColors
+void updatePixelColors(led_strip::PixelManager &manager,
+                       Adafruit_NeoPixel &pixels, uint8_t mode) {}
 
 }  // namespace tasks
 

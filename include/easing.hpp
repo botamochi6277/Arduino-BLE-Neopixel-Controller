@@ -18,8 +18,8 @@ uint8_t argmax3(T v0, T v1, T v2) {
 }
 
 template <typename T>
-T remap(T x, T in_min, T in_max, T out_min, T out_max, bool chip = false) {
-  if (chip) {
+T remap(T x, T in_min, T in_max, T out_min, T out_max, bool clip = false) {
+  if (clip) {
     if (x < in_min) {
       return out_min;
     }

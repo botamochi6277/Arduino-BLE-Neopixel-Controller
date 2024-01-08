@@ -49,23 +49,6 @@ unsigned int loop_count = 0;
 bool transition_completed = false;  // flag for color transition
 bool backward;
 
-uint32_t current_colors[NUM_PIXELS];
-
-uint32_t start_colors[NUM_PIXELS];
-uint32_t transited_colors[NUM_PIXELS];
-uint32_t cache_colors[NUM_PIXELS];
-
-uint32_t palette[4];
-float transition_weights[NUM_PIXELS];
-
-// FLUCTUATION_TIME
-uint32_t fluctuation_colors[NUM_PIXELS];
-
-uint8_t red_buff;
-uint8_t green_buff;
-uint8_t blue_buff;
-uint32_t color_buff;
-
 Adafruit_NeoPixel pixels(NUM_PIXELS, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 led_strip::PixelManager color_manager;
 
@@ -86,7 +69,7 @@ void setup() {
     if (Serial) {
       break;
     }
-    delay(100);
+    delay(10);
   }
 
   Serial.println("NeoPixel BLE waking");
@@ -144,13 +127,12 @@ void setup() {
   // init color buffer
   for (size_t i = 0; i < NUM_PIXELS; i++) {
     color_manager.setCurrentColor(i, color::hsbToHsbhex(0xff00, 0xff, 0x00));
-    // current_colors[i] = color::hsbToHsbhex(0xff00, 0xff, 0x00);
-  }
-  color_manager.setPaletteColor(0, pixel_srv.color01_chr.value());
-  color_manager.setPaletteColor(1, pixel_srv.color02_chr.value());
-  color_manager.setPaletteColor(2, pixel_srv.color03_chr.value());
-  color_manager.setPaletteColor(3, pixel_srv.color04_chr.value());
 
+    color_manager.setPaletteColor(0, pixel_srv.color01_chr.value());
+    color_manager.setPaletteColor(1, pixel_srv.color02_chr.value());
+    color_manager.setPaletteColor(2, pixel_srv.color03_chr.value());
+    color_manager.setPaletteColor(3, pixel_srv.color04_chr.value());
+  }
   // temporal
   for (size_t i = 0; i < NUM_PIXELS; i++) {
     color_manager.setFluctuationColor(i, color_manager.getPaletteColor(3));
@@ -165,20 +147,54 @@ void setup() {
       ->startFps(1.0);
 #endif
   Tasks
+      .add("UpdateRainbowColors",
+           [] { tasks::setRainbow(color_manager, pixels, clock_sec, 10.0f); })
+      ->startFps(24.0);
+  Tasks
       .add("UpdatePixelColors",
            [] {
-             tasks::setRainbow(color_manager, pixels, clock_sec, 10.0f);
              tasks::setPixelColors(color_manager, pixels);
              pixels.show();
            })
       ->startFps(24.0);
-}
+#ifdef LSM6DS3_ENABLED
+  Tasks
+      .add("UpdateGyroColors",
+           [] {
+             float omega_z = my_imu.readFloatGyroZ();  // deg/sec ??
+             float temperature = easing::remap(abs(omega_z), 0.0f, 180.0f, 0.0f,
+                                               1.0f, true);  // 3.14 rad/sec
+             tasks::setHeatColors(color_manager, temperature);
+           })
+      ->startFps(100.0);
+#endif
+
+}  // end of setup
 
 void loop() {
   milli_sec = millis();
   clock_sec = milli_sec * 1.0e-3f;
   pixel_srv.timer_chr.writeValue(milli_sec);
   Tasks.update();  // automatically execute tasks
+
+  if (pixel_srv.fluctuation_chr.written()) {
+    tasks::PixelMode mode = tasks::PixelMode(pixel_srv.fluctuation_chr.value());
+    if (mode == tasks::PixelMode::HueRainbow) {
+      Tasks["UpdateRainbowColors"]->play();
+
+#ifdef LSM6DS3_ENABLED
+      Tasks["UpdateGyroColors"]->pause();
+#endif
+    }
+#ifdef LSM6DS3_ENABLED
+    if (mode == tasks::PixelMode::GyroHeatmap) {
+      Tasks["UpdateGyroColors"]->play();
+      Tasks["UpdateRainbowColors"]->pause();
+    }
+#endif
+  }
+
+  // Tasks["UpdatePixelColors"]->pause();
   delay(1);
   loop_count++;
 }
