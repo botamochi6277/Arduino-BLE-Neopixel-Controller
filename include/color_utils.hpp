@@ -8,8 +8,14 @@
 #include "easing.hpp"
 namespace color {
 
-void hueCycle(float &r, float &g, float &b, float time, float period,
-              float initial_phase);
+enum class CyclicColormap : unsigned char { Twilight, TwilightShifted, Hsv };
+float cyclicValue(float time, float period, float initial_phase, float a0,
+                  float a[], float b[], float f[], size_t coffs_length);
+void setCyclicColor(float &r, float &g, float &b, float time, float period,
+                    float initial_phase, CyclicColormap cmap);
+
+void setHsvCyclicColor(float &r, float &g, float &b, float time, float period,
+                       float initial_phase);
 
 void heatColor(float &r, float &g, float &b, float temperature);
 
@@ -62,7 +68,8 @@ void PixelUnit::setColor(unsigned int hexcolor) {
 }
 
 void PixelUnit::setHueCycle(float time, float period, float initial_phase) {
-  hueCycle(this->red_, this->green_, this->blue_, time, period, initial_phase);
+  setHsvCyclicColor(this->red_, this->green_, this->blue_, time, period,
+                    initial_phase);
 }
 void PixelUnit::setHeatColor(float temperature) {
   heatColor(this->red_, this->green_, this->blue_, temperature);
@@ -94,12 +101,104 @@ void PixelUnit::blendFromAnchors(PixelUnit &anchor1, PixelUnit &anchor2) {
   this->blue_ = weight1 * anchor1.blue() + weight2 * anchor2.blue();
 }
 
-void hueCycle(float &r, float &g, float &b, float time, float period,
-              float initial_phase) {
+float cyclicValue(float time, float period, float initial_phase, float a0,
+                  float a[], float b[], float f[], size_t coffs_length) {
+  float x = a0;  // DC component
+  for (size_t i = 0; i < coffs_length; i++) {
+    // e^((a + j*b)*t)
+    x += a[i] * cos(2.0f * M_PI * f[i] * (time / period) + initial_phase) -
+         b[i] * sin(2.0f * M_PI * f[i] * (time / period) + initial_phase);
+  }
+  return x;
+}
+
+void setCyclicColor(float &r, float &g, float &b, float time, float period,
+                    float initial_phase, CyclicColormap cmap) {
+  // a+bj, f
+  // hsv param
+  static float hsv_r_a0 = 4.8585e-01f;
+  static float hsv_r_a[] = {6.0380e-01f, -1.2575e-01f};
+  static float hsv_r_b[] = {-1.0742e-03, 9.5391e-04};
+  static float hsv_r_f[] = {9.8438e-01, 2.9531e+00};
+
+  static float hsv_g_a0 = 5.1379e-01f;
+  static float hsv_g_a[] = {-2.9102e-01f, -1.3128e-01f};
+  static float hsv_g_b[] = {-5.3190e-01, -9.5479e-03};
+  static float hsv_g_f[] = {9.8438e-01, 2.9531e+00};
+
+  static float hsv_b_a0 = 5.1249e-01;
+  static float hsv_b_a[] = {-2.9224e-01, -1.3310e-01};
+  static float hsv_b_b[] = {5.3225e-01, 1.0011e-02};
+  static float hsv_b_f[] = {9.8438e-01, 2.9531e+00};
+
+  if (cmap == CyclicColormap::Hsv) {
+    r = cyclicValue(time, period, initial_phase, hsv_r_a0, hsv_r_a, hsv_r_b,
+                    hsv_r_f, 2U);
+    g = cyclicValue(time, period, initial_phase, hsv_g_a0, hsv_g_a, hsv_g_b,
+                    hsv_g_f, 2U);
+    b = cyclicValue(time, period, initial_phase, hsv_b_a0, hsv_b_a, hsv_b_b,
+                    hsv_b_f, 2U);
+  }
+
+  // twilight
+  static float tw_r_a0 = 5.3852e-01f;
+  static float tw_r_a[] = {2.5764e-01, 5.9289e-02};
+  static float tw_r_b[] = {1.4902e-01, -1.3312e-02};
+  static float tw_r_f[] = {9.8438e-01, 2.9531e+00};
+
+  static float tw_g_a0 = 4.1168e-01f;
+  static float tw_g_a[] = {3.8150e-01, 3.0205e-02};
+  static float tw_g_b[] = {-3.3706e-02, -3.1774e-03};
+  static float tw_g_f[] = {9.8438e-01, 1.9688e+00};
+
+  static float tw_b_a0 = 5.3664e-01;
+  static float tw_b_a[] = {2.4245e-01, 6.7400e-02};
+  static float tw_b_b[] = {-1.7885e-01, 2.8135e-02};
+  static float tw_b_f[] = {9.8438e-01, 2.9531e+00};
+  if (cmap == CyclicColormap::Twilight) {
+    r = cyclicValue(time, period, initial_phase, tw_r_a0, tw_r_a, tw_r_b,
+                    tw_r_f, 2U);
+    g = cyclicValue(time, period, initial_phase, tw_g_a0, tw_g_a, tw_g_b,
+                    tw_g_f, 2U);
+    b = cyclicValue(time, period, initial_phase, tw_b_a0, tw_b_a, tw_b_b,
+                    tw_b_f, 2U);
+  }
+
+  // twilight_shifted
+  static float tws_r_a0 = 5.4938e-01f;
+  static float tws_r_a[] = {-2.7070e-01, -5.1723e-02};
+  static float tws_r_b[] = {1.2390e-01, -3.2384e-02};
+  static float tws_r_f[] = {9.8438e-01, 2.9531e+00};
+
+  static float tws_g_a0 = 4.2379e-01;
+  static float tws_g_a[] = {-3.7971e-01, 2.2300e-02};
+  static float tws_g_b[] = {-7.1732e-02, 5.3167e-03};
+  static float tws_g_f[] = {9.8438e-01, 1.9688e+00};
+
+  static float tws_b_a0 = 5.4709e-01;
+  static float tws_b_a[] = {-2.2441e-01, -7.1713e-02};
+  static float tws_b_b[] = {-2.0186e-01, 7.4686e-03};
+  static float tws_b_f[] = {9.8438e-01, 2.9531e+00};
+
+  if (cmap == CyclicColormap::TwilightShifted) {
+    r = cyclicValue(time, period, initial_phase, tw_r_a0, tw_r_a, tw_r_b,
+                    tw_r_f, 2U);
+    g = cyclicValue(time, period, initial_phase, tw_g_a0, tw_g_a, tw_g_b,
+                    tw_g_f, 2U);
+    b = cyclicValue(time, period, initial_phase, tw_b_a0, tw_b_a, tw_b_b,
+                    tw_b_f, 2U);
+  }
+  r = constrain(r, 0.0f, 1.0f);
+  g = constrain(g, 0.0f, 1.0f);
+  b = constrain(b, 0.0f, 1.0f);
+  return;
+}
+
+void setHsvCyclicColor(float &r, float &g, float &b, float time, float period,
+                       float initial_phase) {
   // (1,0,0),(1,1,0),(0,0,1),(0,1,1),(0,0,1),(1,0,1)
   // https://ja.wikipedia.org/wiki/カラーグラデーション#/media/ファイル:Gnuplot_HSV_gradient.png
   float phase = 2.0f * M_PI * (time / period) + initial_phase - M_PI / 6.0f;
-  float a = 0.5773502691896258;  // 1/np.sqrt(3);
   r = constrain(sinf(phase + 2.0f * M_PI / 3.0f) + 0.5f, 0.0f, 1.0f);
   g = constrain(sinf(phase) + 0.5f, 0.0f, 1.0f);
   b = constrain(sinf(phase - 2.0f * M_PI / 3.0f) + 0.5f, 0.0f, 1.0f);
@@ -110,6 +209,29 @@ void heatColor(float &r, float &g, float &b, float temperature) {
   r = easing::hardSigmoid(temperature, 0.333f, 1.0f);
   g = easing::hardSigmoid(temperature - 0.333f, 0.333f, 1.0f);
   b = easing::hardSigmoid(temperature - 0.666f, 0.333f, 1.0f);
+}
+
+void polyRgb(float &r, float &g, float &b, float t, uint8_t order,
+             float r_coffs[], float g_coffs[], float b_coffs[]) {
+  r = 0.0f;
+  g = 0.0f;
+  b = 0.0f;
+  for (size_t i = 0; i < order; i++) {
+    r += r_coffs[i] * powf(t, i);
+    g += g_coffs[i] * powf(t, i);
+    b += b_coffs[i] * powf(t, i);
+  }
+}
+
+void viridisColor(float &r, float &g, float &b, float t) {
+  // order = 5
+  static float r_coffs[] = {0.27130491f, 0.81659759f, -6.19363115f, 9.76791191f,
+                            -3.69728915f};
+  static float g_coffs[] = {0.019942f, 1.51977397f, -1.60202556f, 2.03930642f,
+                            -1.07467385f};
+  static float b_coffs[] = {0.34726911f, 1.05768234f, -0.52648131f,
+                            -2.21724279f, 1.46271341f};
+  polyRgb(r, g, b, t, 5, r_coffs, g_coffs, b_coffs);
 }
 
 void hexToRgbw(uint32_t color, uint8_t &r, uint8_t &g, uint8_t &b, uint8_t &w) {
