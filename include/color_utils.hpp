@@ -9,8 +9,12 @@
 namespace color {
 
 enum class CyclicColormap : unsigned char { Twilight, TwilightShifted, Hsv };
+enum class SequentialColormap : unsigned char { Cool, Wistia, Hot };
+enum class DivergingColormap : unsigned char { Spectral, CoolWarm };
 float cyclicValue(float time, float period, float initial_phase, float a0,
                   float a[], float b[], float f[], size_t coffs_length);
+
+float polyValue(float x, float coffs[], size_t coffs_length);
 void setCyclicColor(float &r, float &g, float &b, float time, float period,
                     float initial_phase, CyclicColormap cmap);
 
@@ -112,6 +116,18 @@ float cyclicValue(float time, float period, float initial_phase, float a0,
   return x;
 }
 
+float polyValue(float x, float coffs[], size_t coffs_length) {
+  float y = 0.0f;
+  for (size_t i = 0; i < coffs_length; i++) {
+    if (i == 0) {
+      y += coffs[i];
+    } else {
+      y += powf(x, i);
+    }
+  }
+  return y;
+}
+
 void setCyclicColor(float &r, float &g, float &b, float time, float period,
                     float initial_phase, CyclicColormap cmap) {
   // a+bj, f
@@ -202,6 +218,74 @@ void setHsvCyclicColor(float &r, float &g, float &b, float time, float period,
   r = constrain(sinf(phase + 2.0f * M_PI / 3.0f) + 0.5f, 0.0f, 1.0f);
   g = constrain(sinf(phase) + 0.5f, 0.0f, 1.0f);
   b = constrain(sinf(phase - 2.0f * M_PI / 3.0f) + 0.5f, 0.0f, 1.0f);
+}
+
+void setSequentialColor(float &r, float &g, float &b, float intensity,
+                        SequentialColormap cmap) {
+  static float cool_r[] = {1.1765e-02, 9.7647e-01};
+  static float cool_g[] = {9.8824e-01, -9.7647e-01};
+  static float cool_b[] = {1.0000e+00, -7.3651e-17};
+  if (cmap == SequentialColormap::Cool) {
+    r = polyValue(intensity, cool_r, 2U);
+    g = polyValue(intensity, cool_g, 2U);
+    b = polyValue(intensity, cool_b, 2U);
+  }
+  static float hot_r[] = {7.2484e-02, 3.0686e+00, -9.9480e-01, -4.2600e+00,
+                          3.1138e+00};
+  static float hot_g[] = {1.9271e-07, -5.2787e-01, 6.9576e-01, 6.2264e+00,
+                          -5.3943e+00};
+  static float hot_b[] = {-5.5203e-08, 8.4880e-02, 2.9603e-01, -2.8484e+00,
+                          3.4211e+00};
+  if (cmap == SequentialColormap::Hot) {
+    r = polyValue(intensity, hot_r, 5U);
+    g = polyValue(intensity, hot_g, 5U);
+    b = polyValue(intensity, hot_b, 5U);
+  }
+
+  static float wistia_r[] = {8.9910e-01, 5.3242e-01, -8.2493e-01, 3.8220e-01};
+  static float wistia_g[] = {9.9576e-01, -3.3824e-01, -3.9361e-01, 2.4023e-01};
+  static float wistia_b[] = {4.6072e-01, -1.9199e+00, 2.5792e+00, -1.1200e+00};
+  //   red coff: 8.9910e-01,5.3242e-01,-8.2493e-01,3.8220e-01
+  // green coff: 9.9576e-01,-3.3824e-01,-3.9361e-01,2.4023e-01
+  // blue coff: 4.6072e-01,-1.9199e+00,2.5792e+00,-1.1200e+00
+  if (cmap == SequentialColormap::Wistia) {
+    r = polyValue(intensity, wistia_r, 4U);
+    g = polyValue(intensity, wistia_g, 4U);
+    b = polyValue(intensity, wistia_b, 4U);
+  }
+  r = constrain(r, 0.0f, 1.0f);
+  g = constrain(g, 0.0f, 1.0f);
+  b = constrain(b, 0.0f, 1.0f);
+  return;
+}
+
+void setDivergingColor(float &r, float &g, float &b, float intensity,
+                       DivergingColormap cmap) {
+  static float spectral_r[] = {6.4498e-01, 1.1186e+00, 4.1186e+00, -1.4378e+01,
+                               8.8443e+00};
+  static float spectral_g[] = {3.2065e-02, 1.7566e+00, 4.2265e+00, -1.0415e+01,
+                               4.7360e+00};
+  static float spectral_b[] = {2.6482e-01, -6.5753e-01, 6.5861e+00, -9.8745e+00,
+                               4.3289e+00};
+  if (cmap == DivergingColormap::Spectral) {
+    r = polyValue(intensity, spectral_r, 5U);
+    g = polyValue(intensity, spectral_g, 5U);
+    b = polyValue(intensity, spectral_b, 5U);
+  }
+
+  static float cool_warm_r[] = {2.4352e-01, 1.9864e+00, -1.5066e+00};
+  static float cool_warm_g[] = {3.1919e-01, 2.2997e+00, -2.5500e+00};
+  static float cool_warm_b[] = {7.7167e-01, 9.1354e-01, -1.5222e+00};
+  if (cmap == DivergingColormap::CoolWarm) {
+    r = polyValue(intensity, cool_warm_r, 3U);
+    g = polyValue(intensity, cool_warm_g, 3U);
+    b = polyValue(intensity, cool_warm_b, 3U);
+  }
+
+  r = constrain(r, 0.0f, 1.0f);
+  g = constrain(g, 0.0f, 1.0f);
+  b = constrain(b, 0.0f, 1.0f);
+  return;
 }
 
 void heatColor(float &r, float &g, float &b, float temperature) {
