@@ -7,7 +7,7 @@
 #include <math.h>
 
 #include "Colormap.hpp"
-#include "easing.hpp"
+#include "Easing.hpp"
 namespace color {
 
 void hexToRgbw(uint32_t color, uint8_t &r, uint8_t &g, uint8_t &b, uint8_t &w) {

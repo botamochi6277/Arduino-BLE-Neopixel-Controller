@@ -15,14 +15,14 @@
 #include "LSM6DS3.h"  // IMU chip
 #endif
 #include <TaskManager.h>
+#include <Wire.h>
 
+#include "BLEPresets.hpp"
 #include "ColorUtils.hpp"
-#include "Wire.h"
-#include "neopixel_service.hpp"
-#include "preset.hpp"
-#include "strip.hpp"
-#include "tasks.hpp"
-#include "utils.hpp"
+#include "LedStrip.hpp"
+#include "MyTasks.hpp"
+#include "MyUtils.hpp"
+#include "NeopixelService.hpp"
 
 // NeoPixel variables
 #ifdef ARDUINO_M5Stack_ATOM

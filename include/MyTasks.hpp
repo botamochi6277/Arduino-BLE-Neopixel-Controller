@@ -5,8 +5,8 @@
 #include <TaskManager.h>
 
 #include "Colormap.hpp"
-#include "neopixel_service.hpp"
-#include "strip.hpp"
+#include "LedStrip.hpp"
+#include "NeopixelService.hpp"
 
 namespace tasks {
 
