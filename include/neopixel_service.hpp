@@ -50,9 +50,9 @@ class NeoPixelService : public BLEService {
   BLEUnsignedIntCharacteristic color03_chr;
   BLEUnsignedIntCharacteristic color04_chr;
 
-  BLEUnsignedCharCharacteristic blending_chr;     // gradation, cycle
-  BLEUnsignedCharCharacteristic fluctuation_chr;  // (acc,time)
-  BLEUnsignedCharCharacteristic transition_chr;   // dissolve, slide, etc.
+  BLEUnsignedCharCharacteristic colormap_chr;       // gradation, cycle
+  BLEUnsignedCharCharacteristic lighting_mode_chr;  // (acc,time)
+  BLEUnsignedCharCharacteristic transition_chr;     // dissolve, slide, etc.
 
   NeoPixelService(/* args */);
   ~NeoPixelService();
@@ -71,11 +71,11 @@ NeoPixelService::NeoPixelService()
       color02_chr("19B10023-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
       color03_chr("19B10024-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
       color04_chr("19B10025-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
-      blending_chr("19B10026-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
+      colormap_chr("19B10026-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
       transition_chr("19B10027-E8F2-537E-4F6C-D104768A1214",
                      BLERead | BLEWrite),
-      fluctuation_chr("19B10028-E8F2-537E-4F6C-D104768A1214",
-                      BLERead | BLEWrite) {
+      lighting_mode_chr("19B10028-E8F2-537E-4F6C-D104768A1214",
+                        BLERead | BLEWrite) {
   // add characteristics to service
   this->addCharacteristic(this->timer_chr);
   this->addCharacteristic(this->imu_available_chr);
@@ -88,9 +88,9 @@ NeoPixelService::NeoPixelService()
   this->addCharacteristic(this->color02_chr);
   this->addCharacteristic(this->color03_chr);
   this->addCharacteristic(this->color04_chr);
-  this->addCharacteristic(this->blending_chr);
+  this->addCharacteristic(this->colormap_chr);
   this->addCharacteristic(this->transition_chr);
-  this->addCharacteristic(this->fluctuation_chr);
+  this->addCharacteristic(this->lighting_mode_chr);
 
   // User Description
   // system property characteristic
@@ -119,11 +119,11 @@ NeoPixelService::NeoPixelService()
   this->color04_chr.addDescriptor(color04_descriptor);
 
   BLEDescriptor blending_descriptor("2901", "color blending type");
-  this->blending_chr.addDescriptor(blending_descriptor);
+  this->colormap_chr.addDescriptor(blending_descriptor);
   BLEDescriptor transition_descriptor("2901", "transition type");
   this->transition_chr.addDescriptor(transition_descriptor);
   BLEDescriptor fluctuation_descriptor("2901", "fluctuation");
-  this->fluctuation_chr.addDescriptor(fluctuation_descriptor);
+  this->lighting_mode_chr.addDescriptor(fluctuation_descriptor);
 
   // Format Description
   BLEDescriptor millisec_descriptor("2904", this->msec_format_, 7);
@@ -150,9 +150,9 @@ NeoPixelService::NeoPixelService()
   BLEDescriptor trans_unitless_descriptor("2904", this->cmd_format_, 7);
   this->transition_chr.addDescriptor(trans_unitless_descriptor);
   BLEDescriptor blending_unitless_descriptor("2904", this->cmd_format_, 7);
-  this->blending_chr.addDescriptor(blending_unitless_descriptor);
+  this->colormap_chr.addDescriptor(blending_unitless_descriptor);
   BLEDescriptor fluctuation_unitless_descriptor("2904", this->cmd_format_, 7);
-  this->fluctuation_chr.addDescriptor(fluctuation_unitless_descriptor);
+  this->lighting_mode_chr.addDescriptor(fluctuation_unitless_descriptor);
 }
 
 NeoPixelService::~NeoPixelService(){};

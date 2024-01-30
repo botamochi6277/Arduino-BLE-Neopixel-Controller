@@ -29,6 +29,21 @@ float cyclicValue(float intensity, float initial_phase, float a0,
   return x;
 }
 
+enum class ColormapId : unsigned char {
+  // cyclic
+  Hsv,
+  Twilight,
+  TwilightShifted,
+  // sequential
+  Cool,
+  Hot,
+  Wistia,
+  // diverging
+  Spectral,
+  CoolWarm,
+  Viridis,
+};
+
 enum class CyclicColormap : unsigned char { Hsv, Twilight, TwilightShifted };
 
 void assignHsvHueColor(float &r, float &g, float &b, float intensity,
@@ -209,15 +224,15 @@ void assignViridisColor(float &r, float &g, float &b, float intensity) {
 // utils
 
 void assignCyclicColor(float &r, float &g, float &b, float intensity,
-                       float initial_phase, CyclicColormap cmap) {
+                       float initial_phase, ColormapId cmap) {
   switch (cmap) {
-    case CyclicColormap::Hsv:
+    case ColormapId::Hsv:
       assignHsvHueColor(r, g, b, intensity, initial_phase);
       break;
-    case CyclicColormap::Twilight:
+    case ColormapId::Twilight:
       assignTwilightColor(r, g, b, intensity, initial_phase);
       break;
-    case CyclicColormap::TwilightShifted:
+    case ColormapId::TwilightShifted:
       assignTwilightShiftedColor(r, g, b, intensity, initial_phase);
       break;
     default:
@@ -226,16 +241,16 @@ void assignCyclicColor(float &r, float &g, float &b, float intensity,
   return;
 }
 
-void setSequentialColor(float &r, float &g, float &b, float intensity,
-                        SequentialColormap cmap) {
+void assignSequentialColor(float &r, float &g, float &b, float intensity,
+                           ColormapId cmap) {
   switch (cmap) {
-    case SequentialColormap::Cool:
+    case ColormapId::Cool:
       assignCoolColor(r, g, b, intensity);
       break;
-    case SequentialColormap::Hot:
+    case ColormapId::Hot:
       assignHotColor(r, g, b, intensity);
       break;
-    case SequentialColormap::Wistia:
+    case ColormapId::Wistia:
       assignWistiaColor(r, g, b, intensity);
       break;
 
@@ -245,16 +260,16 @@ void setSequentialColor(float &r, float &g, float &b, float intensity,
   return;
 }
 
-void setDivergingColor(float &r, float &g, float &b, float intensity,
-                       DivergingColormap cmap) {
+void assignDivergingColor(float &r, float &g, float &b, float intensity,
+                          ColormapId cmap) {
   switch (cmap) {
-    case DivergingColormap::Spectral:
+    case ColormapId::Spectral:
       assignSpectralColor(r, g, b, intensity);
       break;
-    case DivergingColormap::CoolWarm:
+    case ColormapId::CoolWarm:
       assignCoolWarmColor(r, g, b, intensity);
       break;
-    case DivergingColormap::Viridis:
+    case ColormapId::Viridis:
       assignViridisColor(r, g, b, intensity);
       break;
 
@@ -262,6 +277,29 @@ void setDivergingColor(float &r, float &g, float &b, float intensity,
       break;
   }
   return;
+}
+
+void assignColor(float &r, float &g, float &b, float intensity, ColormapId cmap,
+                 float initial_phase) {
+  switch (cmap) {
+    case ColormapId::Hsv:
+    case ColormapId::Twilight:
+    case ColormapId::TwilightShifted:
+      assignCyclicColor(r, g, b, intensity, initial_phase, cmap);
+      break;
+    case ColormapId::Cool:
+    case ColormapId::Hot:
+    case ColormapId::Wistia:
+      assignSequentialColor(r, g, b, intensity, cmap);
+      break;
+    case ColormapId::Spectral:
+    case ColormapId::CoolWarm:
+    case ColormapId::Viridis:
+      assignDivergingColor(r, g, b, intensity, cmap);
+      break;
+    default:
+      break;
+  }
 }
 
 }  // namespace colormap

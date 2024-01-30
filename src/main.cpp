@@ -16,8 +16,8 @@
 #endif
 #include <TaskManager.h>
 
+#include "ColorUtils.hpp"
 #include "Wire.h"
-#include "color_utils.hpp"
 #include "neopixel_service.hpp"
 #include "preset.hpp"
 #include "strip.hpp"
@@ -147,8 +147,12 @@ void setup() {
       ->startFps(1.0);
 #endif
   Tasks
-      .add("UpdateRainbowColors",
-           [] { tasks::setRainbow(color_manager, pixels, clock_sec, 10.0f); })
+      .add("UpdateColors",
+           [] {
+             tasks::updatePixelColors(color_manager, tasks::SensorSource::Timer,
+                                      led_strip::IntensityFuncId::TravelingWave,
+                                      colormap::ColormapId::Spectral);
+           })
       ->startFps(24.0);
   Tasks
       .add("UpdatePixelColors",
@@ -157,17 +161,19 @@ void setup() {
              pixels.show();
            })
       ->startFps(24.0);
-#ifdef LSM6DS3_ENABLED
-  Tasks
-      .add("UpdateGyroColors",
-           [] {
-             float omega_z = my_imu.readFloatGyroZ();  // deg/sec ??
-             float temperature = easing::remap(abs(omega_z), 0.0f, 180.0f, 0.0f,
-                                               1.0f, true);  // 3.14 rad/sec
-             tasks::setHeatColors(color_manager, temperature);
-           })
-      ->startFps(100.0);
-#endif
+  // #ifdef LSM6DS3_ENABLED
+  //   Tasks
+  //       .add("UpdateGyroColors",
+  //            [] {
+  //              float omega_z = my_imu.readFloatGyroZ();  // deg/sec ??
+  //              float temperature = easing::remap(abs(omega_z), 0.0f, 180.0f,
+  //              0.0f,
+  //                                                1.0f, true);  // 3.14
+  //                                                rad/sec
+  //              tasks::setHeatColors(color_manager, temperature);
+  //            })
+  //       ->startFps(100.0);
+  // #endif
 
 }  // end of setup
 
@@ -177,22 +183,16 @@ void loop() {
   pixel_srv.timer_chr.writeValue(milli_sec);
   Tasks.update();  // automatically execute tasks
 
-  if (pixel_srv.fluctuation_chr.written()) {
-    tasks::PixelMode mode = tasks::PixelMode(pixel_srv.fluctuation_chr.value());
-    if (mode == tasks::PixelMode::HueRainbow) {
-      Tasks["UpdateRainbowColors"]->play();
+  // #ifdef LSM6DS3_ENABLED
+  //   Tasks["UpdateGyroColors"]->pause();
+  // #endif
 
-#ifdef LSM6DS3_ENABLED
-      Tasks["UpdateGyroColors"]->pause();
-#endif
-    }
-#ifdef LSM6DS3_ENABLED
-    if (mode == tasks::PixelMode::GyroHeatmap) {
-      Tasks["UpdateGyroColors"]->play();
-      Tasks["UpdateRainbowColors"]->pause();
-    }
-#endif
-  }
+  // #ifdef LSM6DS3_ENABLED
+  // if (mode == tasks::PixelMode::GyroHeatmap) {
+  //   Tasks["UpdateGyroColors"]->play();
+  //   Tasks["UpdateRainbowColors"]->pause();
+  // }
+  // #endif
 
   // Tasks["UpdatePixelColors"]->pause();
   delay(1);

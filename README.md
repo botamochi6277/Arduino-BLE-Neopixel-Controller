@@ -1,41 +1,48 @@
-# XIAO BLE Neopixel Controller
+# XIAO BLE NeoPixel Controller
 
 [![PlatformIO Build](https://github.com/botamochi6277/XIAO-BLE-Neopixel-Controller/actions/workflows/ci-platformio.yml/badge.svg)](https://github.com/botamochi6277/XIAO-BLE-Neopixel-Controller/actions/workflows/ci-platformio.yml)
 
-Control Neopixel-strip with [Seeeduino XIAO BLE](https://wiki.seeedstudio.com/XIAO_BLE/)
+Control NeoPixel-strip with [Seeeduino XIAO BLE](https://wiki.seeedstudio.com/XIAO_BLE/)/[M5Stack Atom Lite](https://docs.m5stack.com/en/core/atom_lite)
 
-You can change the lighting colors of the pixels with BLE.
+You can change the lighting mode with BLE.
 
 ```mermaid
 graph LR
 
 subgraph BLE Service
-  color01
-  color02
-  color03
-  color04
-
-  blend_type
-  noise
+  data_src_id
+  intensity_func_id
+  colormap_id
 end
 
-blend1((+))
+data_src_id-.->|select|sensor
+colormap_id-.->|select|colormap
+intensity_func_id-.->|select|intensity_func
 
-color01-->blend1
-color02-->blend1
-blend_type-->blend1
-
-blend1-->c1([static pixel colors])
-
-blend2((+))
-
-c1-->blend2
-noise-->blend2
-
-blend2-->c2([dynamic pixel colors])
-c2-->neopixels
+sensor-->|value|intensity_func-->|intensity|colormap-->|color|pixel_manager-->neopixels
 
 ```
+
+
+## lighting mode
+You can choice a lighting mode in the follows.
+
+
+- Periodic: pixel colors change depending on elapsed time. 
+- Responsive: pixel colors change depending on sensor values.
+
+## ColorMap
+
+You can select colormap according to lighting mode.
+
++ Cyclic colormap: for cyclic value. e.g. phase and orientation angle
++ Sequential colormap: for unsigned sensor value. e.g. magnitude of acc
++ Diverging colormap: for signed value. e.g. angular velocity
+
+
+- Colormap
+- Intensity Function
+- Arg of the intensity Function
 
 ## Service Profile
 
@@ -96,13 +103,13 @@ characteristics:
     properties:
       - "Read"
       - "Write"
-  - name: "blending_chr"
+  - name: "colormap_chr"
     uuid: "19B10026-E8F2-537E-4F6C-D104768A1214"
     data_type: "UnsignedChar"
     properties:
       - "Read"
       - "Write"
-  - name: "fluctuation_chr"
+  - name: "lighting_mode_chr"
     uuid: "19B10028-E8F2-537E-4F6C-D104768A1214"
     data_type: "UnsignedChar"
     properties:

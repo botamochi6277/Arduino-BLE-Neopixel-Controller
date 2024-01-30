@@ -6,7 +6,9 @@
 #ifndef NUM_PIXELS
 #define NUM_PIXELS 45
 #endif
-#include "color_utils.hpp"
+#include "ColorUtils.hpp"
+#include "Colormap.hpp"
+#include "PixelUnit.hpp"
 
 namespace led_strip {
 
@@ -139,32 +141,21 @@ bool slideEasing(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
   return progress > 1.0f;
 }
 
-// /**
-//  * @brief assign easing color
-//  *
-//  * @param colors array of colors
-//  * @param num_pixels
-//  * @param left
-//  * @param right
-//  */
-// void gradientColor(uint32_t colors[], size_t num_pixels, uint32_t left,
-//                    uint32_t right) {
-//   for (size_t i = 0; i < num_pixels; i++) {
-//     colors[i] = color::rgbEasing(left, right, static_cast<float>(i) /
-//     num_pixels);
-//   }
-// }
+// intensity functions
+enum class IntensityFuncId : unsigned char {
+  Heat,  // dissolve
+  Wipe,
+  TravelingWave,
+  TravelingPulse
+};
+float travelingWave(float freq, float time, float position, float speed,
+                    float initial_phase) {
+  return 0.5f *
+         sinf(2.0f * M_PI * freq * (time - (position / (speed + 1e-9f))) +
+              0.5f);
+}
 
-// void rainbowColor(uint32_t colors[], size_t num_pixels, unsigned char s =
-// 255,
-//                   unsigned char v = 200) {
-//   unsigned char hue = 0;
-
-//   for (size_t i = 0; i < num_pixels; i++) {
-//     hue = (0xFFFF * i) / num_pixels;
-//     colors[i] = color::hsbToHex(hue, s, v);
-//   }
-// }
+// pulse function
 
 class PixelManager {
  private:
@@ -177,7 +168,8 @@ class PixelManager {
   float transition_weights[NUM_PIXELS];
   uint32_t fluctuation_colors[NUM_PIXELS];
 
-  float transition_start_sec;
+  float transition_start_sec_;
+  float intensity_[NUM_PIXELS];
 
  public:
   PixelManager();
@@ -191,6 +183,11 @@ class PixelManager {
   void setFluctuationColor(uint8_t index, unsigned int color);
   void blend(uint32_t hsb_colors[], uint32_t palette_hsb[], uint16_t num_pixels,
              uint8_t palette_size = 2, uint8_t blend_type = 0);
+
+  void setIntensity(float intensity[]);
+  void setIntensity(float value, IntensityFuncId func_id);
+  void setColor();  // set color with intensity[]
+  void setColor(colormap::ColormapId cmap);
 };
 
 PixelManager::PixelManager() {
@@ -218,6 +215,35 @@ void PixelManager::setCurrentColor(uint8_t index, unsigned int color) {
 }
 void PixelManager::setFluctuationColor(uint8_t index, unsigned int color) {
   this->fluctuation_colors[index] = color;
+}
+
+void PixelManager::setIntensity(float intensity[]) {
+  for (size_t i = 0; i < NUM_PIXELS; i++) {
+    this->intensity_[i] = intensity[i];
+  }
+}
+
+void PixelManager::setIntensity(float value, IntensityFuncId func_id) {
+  switch (func_id) {
+    case IntensityFuncId::Heat:
+      dissolveWeight(this->intensity_, NUM_PIXELS, value);
+      break;
+    case IntensityFuncId::Wipe:
+      wipeWeight(this->intensity_, NUM_PIXELS, value, 0.1);
+      break;
+    case IntensityFuncId::TravelingWave:
+      for (size_t i = 0; i < NUM_PIXELS; i++) {
+        travelingWave(1.0f, value, this->pixel_units[i].position(), 1.0f, 0.0f);
+      }
+      break;
+    default:
+      break;
+  }
+}
+void PixelManager::setColor(colormap::ColormapId cmap) {
+  for (size_t i = 0; i < NUM_PIXELS; i++) {
+    this->pixel_units[i].setCmapColor(this->intensity_[i], cmap);
+  }
 }
 
 };  // namespace led_strip

@@ -4,6 +4,7 @@
 #include <Adafruit_NeoPixel.h>
 #include <TaskManager.h>
 
+#include "Colormap.hpp"
 #include "neopixel_service.hpp"
 #include "strip.hpp"
 
@@ -20,7 +21,7 @@ void updateColorCache(led_strip::PixelManager &manager,
   // color parameter was changed, updating static colors
   if (pixel_srv.color01_chr.written() || pixel_srv.color02_chr.written() ||
       pixel_srv.color03_chr.written() || pixel_srv.color04_chr.written() ||
-      pixel_srv.blending_chr.written() || pixel_srv.num_colors_chr.written() ||
+      pixel_srv.colormap_chr.written() || pixel_srv.num_colors_chr.written() ||
       loop_count == 0) {
     // update clock
 
@@ -32,28 +33,29 @@ void updateColorCache(led_strip::PixelManager &manager,
 
     // led_strip::blend(transited_colors, palette, pixels.numPixels(),
     //                  pixel_srv.num_colors_chr.value(),
-    //                  pixel_srv.blending_chr.value());
+    //                  pixel_srv.colormap_chr.value());
   }
 }
 
-enum class PixelMode : unsigned char {
-  HueRainbow,
-  GyroHeatmap,
-};
+// void setHeatColors(led_strip::PixelManager &manager, float temperature) {
+//   for (uint16_t i = 0; i < NUM_PIXELS; i++) {
+//     manager.pixel_units[i].setHeatColor(temperature);
+//   }
+// }
 
-void setRainbow(led_strip::PixelManager &manager, Adafruit_NeoPixel &pixels,
-                float time, float period) {
-  for (size_t i = 0; i < NUM_PIXELS; i++) {
-    manager.pixel_units[i].setHueCycle(time, period,
-                                       i * (2.0f * M_PI / (NUM_PIXELS - 1)));
-  }
-}
-
-void setHeatColors(led_strip::PixelManager &manager, float temperature) {
-  for (uint16_t i = 0; i < NUM_PIXELS; i++) {
-    manager.pixel_units[i].setHeatColor(temperature);
-  }
-}
+// void updatePeriodicColors(led_strip::PixelManager &manager, uint8_t colormap,
+//                           float time, float freq, float wave_length) {
+//   // freq
+//   // wavelength
+//   // ξ＝a sin {ω(t－x/v)＋ε}
+//   for (uint16_t i = 0; i < NUM_PIXELS; i++) {
+//     float initial_phase = 2.0f * M_PI * i / NUM_PIXELS;
+//     manager.pixel_units[i].setPeriodicColor(
+//         time, 1.0 / freq, initial_phase,
+//         static_cast<colormap::CyclicColormap>(colormap));
+//     // manager.pixel_units[i].setHeatColor(temperature);
+//   }
+// }
 
 void setPixelColors(led_strip::PixelManager &manager,
                     Adafruit_NeoPixel &pixels) {
@@ -62,8 +64,25 @@ void setPixelColors(led_strip::PixelManager &manager,
   }
 }
 
-void updatePixelColors(led_strip::PixelManager &manager,
-                       Adafruit_NeoPixel &pixels, uint8_t mode) {}
+enum class SensorSource { Timer, ACC };
+
+void updatePixelColors(led_strip::PixelManager &manager, SensorSource sensor,
+                       led_strip::IntensityFuncId func_id,
+                       colormap::ColormapId cmap) {
+  // read sensor value
+  float sensor_value = 0.0f;
+  switch (sensor) {
+    case SensorSource::Timer:
+      sensor_value = millis() / 1.0e3f;
+      break;
+
+    default:
+      break;
+  }
+  // compute intensity
+  manager.setIntensity(sensor_value, func_id);
+  manager.setColor(cmap);
+}
 
 }  // namespace tasks
 
