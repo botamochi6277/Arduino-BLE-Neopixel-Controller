@@ -19,6 +19,7 @@
 
 #include "BLEPresets.hpp"
 #include "ColorUtils.hpp"
+#include "Colormap.hpp"
 #include "LedStrip.hpp"
 #include "MyTasks.hpp"
 #include "MyUtils.hpp"
@@ -94,7 +95,9 @@ void setup() {
   BLE.setDeviceName(local_name.c_str());
   BLE.setLocalName("NeoPixels");
   BLE.setAdvertisedService(pixel_srv);
-
+  pixel_srv.init(20U, static_cast<uint8_t>(tasks::SensorSource::Cycle),
+                 static_cast<uint8_t>(led_strip::IntensityFuncId::Heat),
+                 static_cast<uint8_t>(colormap::ColormapId::Hsv));
   // add service
   BLE.addService(pixel_srv);
 
@@ -111,47 +114,39 @@ void setup() {
 #endif
 
   // set the initial value for the characteristic:
-  pixel_srv.brightness_chr.writeValue(20);
-  pixel_srv.num_pixels_chr.writeValue(NUM_PIXELS);
-  pixel_srv.num_colors_chr.writeValue(2U);
-  pixel_srv.transition_chr.writeValue(TRANSITION_DISSOLVE);
-  pixel_srv.color01_chr.writeValue(color::hsbToHsbhex(0x00, 0xff, 0xff));
-  pixel_srv.color02_chr.writeValue(color::hsbToHsbhex(0xffff, 255U, 255U));
-  pixel_srv.color04_chr.writeValue(color::hsbToHsbhex(0xffff, 255U, 255U));
 
   digitalWrite(PIXEL_PIN, LOW);
   pixels.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
-  pixels.setBrightness(20);
+  pixels.setBrightness(pixel_srv.brightness_chr.value());
   pixels.show();  // Turn OFF all pixels
 
   // init color buffer
-  for (size_t i = 0; i < NUM_PIXELS; i++) {
-    color_manager.setCurrentColor(i, color::hsbToHsbhex(0xff00, 0xff, 0x00));
-
-    color_manager.setPaletteColor(0, pixel_srv.color01_chr.value());
-    color_manager.setPaletteColor(1, pixel_srv.color02_chr.value());
-    color_manager.setPaletteColor(2, pixel_srv.color03_chr.value());
-    color_manager.setPaletteColor(3, pixel_srv.color04_chr.value());
-  }
-  // temporal
-  for (size_t i = 0; i < NUM_PIXELS; i++) {
-    color_manager.setFluctuationColor(i, color_manager.getPaletteColor(3));
-  }
+  // for (size_t i = 0; i < NUM_PIXELS; i++) {
+  //   color_manager.setCurrentColor(i, color::hsbToHsbhex(0xff00, 0xff, 0x00));
+  // }
+  // // temporal
+  // for (size_t i = 0; i < NUM_PIXELS; i++) {
+  //   color_manager.setFluctuationColor(i, color_manager.getPaletteColor(3));
+  // }
 
   loop_count = 0;
 
   Tasks.add("BLE_polling", [] { BLE.poll(); })->startFps(10);
 
 #ifdef SEEED_XIAO_NRF52840_SENSE
-  Tasks.add("Heat_beats", [] { digitalWrite(LEDG, !digitalRead(LEDG)); })
+  Tasks.add("Heart_beats", [] { digitalWrite(LEDG, !digitalRead(LEDG)); })
       ->startFps(1.0);
 #endif
   Tasks
-      .add("UpdateColors",
+      .add("UpdateColorCache",
            [] {
-             tasks::updatePixelColors(color_manager, tasks::SensorSource::Timer,
-                                      led_strip::IntensityFuncId::TravelingWave,
-                                      colormap::ColormapId::Spectral);
+             tasks::updatePixelColors(
+                 color_manager,
+                 static_cast<tasks::SensorSource>(pixel_srv.source_chr.value()),
+                 static_cast<led_strip::IntensityFuncId>(
+                     pixel_srv.intensity_func_chr.value()),
+                 static_cast<colormap::ColormapId>(
+                     pixel_srv.colormap_chr.value()));
            })
       ->startFps(24.0);
   Tasks

@@ -45,17 +45,15 @@ class NeoPixelService : public BLEService {
 
   // color palette
   BLEUnsignedCharCharacteristic num_colors_chr;
-  BLEUnsignedIntCharacteristic color01_chr;
-  BLEUnsignedIntCharacteristic color02_chr;
-  BLEUnsignedIntCharacteristic color03_chr;
-  BLEUnsignedIntCharacteristic color04_chr;
-
-  BLEUnsignedCharCharacteristic colormap_chr;       // gradation, cycle
-  BLEUnsignedCharCharacteristic lighting_mode_chr;  // (acc,time)
-  BLEUnsignedCharCharacteristic transition_chr;     // dissolve, slide, etc.
+  BLEUnsignedCharCharacteristic colormap_chr;
+  BLEUnsignedCharCharacteristic source_chr;
+  BLEUnsignedCharCharacteristic intensity_func_chr;
 
   NeoPixelService(/* args */);
   ~NeoPixelService();
+  // void init();
+  void init(uint8_t brightness, uint8_t sensor_id, uint8_t intensity_id,
+            uint8_t cmap);
 };
 
 NeoPixelService::NeoPixelService()
@@ -67,15 +65,10 @@ NeoPixelService::NeoPixelService()
                      BLERead | BLEWrite),
       num_colors_chr("19B10021-E8F2-537E-4F6C-D104768A1214",
                      BLERead | BLEWrite),
-      color01_chr("19B10022-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
-      color02_chr("19B10023-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
-      color03_chr("19B10024-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
-      color04_chr("19B10025-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
       colormap_chr("19B10026-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
-      transition_chr("19B10027-E8F2-537E-4F6C-D104768A1214",
-                     BLERead | BLEWrite),
-      lighting_mode_chr("19B10028-E8F2-537E-4F6C-D104768A1214",
-                        BLERead | BLEWrite) {
+      source_chr("19B10027-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
+      intensity_func_chr("19B10028-E8F2-537E-4F6C-D104768A1214",
+                         BLERead | BLEWrite) {
   // add characteristics to service
   this->addCharacteristic(this->timer_chr);
   this->addCharacteristic(this->imu_available_chr);
@@ -84,13 +77,9 @@ NeoPixelService::NeoPixelService()
   this->addCharacteristic(this->brightness_chr);
 
   this->addCharacteristic(this->num_colors_chr);
-  this->addCharacteristic(this->color01_chr);
-  this->addCharacteristic(this->color02_chr);
-  this->addCharacteristic(this->color03_chr);
-  this->addCharacteristic(this->color04_chr);
   this->addCharacteristic(this->colormap_chr);
-  this->addCharacteristic(this->transition_chr);
-  this->addCharacteristic(this->lighting_mode_chr);
+  this->addCharacteristic(this->source_chr);
+  this->addCharacteristic(this->intensity_func_chr);
 
   // User Description
   // system property characteristic
@@ -109,21 +98,12 @@ NeoPixelService::NeoPixelService()
   BLEDescriptor num_colors_descriptor("2901", "#used_colors");
   this->num_colors_chr.addDescriptor(num_colors_descriptor);
 
-  BLEDescriptor color01_descriptor("2901", "color01 (HSB)");
-  BLEDescriptor color02_descriptor("2901", "color02 (HSB)");
-  BLEDescriptor color03_descriptor("2901", "color03 (HSB)");
-  BLEDescriptor color04_descriptor("2901", "color04 (HSB)");
-  this->color01_chr.addDescriptor(color01_descriptor);
-  this->color02_chr.addDescriptor(color02_descriptor);
-  this->color03_chr.addDescriptor(color03_descriptor);
-  this->color04_chr.addDescriptor(color04_descriptor);
-
-  BLEDescriptor blending_descriptor("2901", "color blending type");
-  this->colormap_chr.addDescriptor(blending_descriptor);
-  BLEDescriptor transition_descriptor("2901", "transition type");
-  this->transition_chr.addDescriptor(transition_descriptor);
-  BLEDescriptor fluctuation_descriptor("2901", "fluctuation");
-  this->lighting_mode_chr.addDescriptor(fluctuation_descriptor);
+  BLEDescriptor cmap_descriptor("2901", "colormap ID");
+  this->colormap_chr.addDescriptor(cmap_descriptor);
+  BLEDescriptor src_descriptor("2901", "source data ID");
+  this->source_chr.addDescriptor(src_descriptor);
+  BLEDescriptor i_func_descriptor("2901", "intensity func ID");
+  this->intensity_func_chr.addDescriptor(i_func_descriptor);
 
   // Format Description
   BLEDescriptor millisec_descriptor("2904", this->msec_format_, 7);
@@ -138,24 +118,30 @@ NeoPixelService::NeoPixelService()
 
   BLEDescriptor num_pixels_unitless_descriptor("2904", this->cmd_format_, 7);
   this->num_pixels_chr.addDescriptor(num_pixels_unitless_descriptor);
-  BLEDescriptor color_unitless_descriptor01("2904", this->color_format_, 7);
-  this->color01_chr.addDescriptor(color_unitless_descriptor01);
-  BLEDescriptor color_unitless_descriptor02("2904", this->color_format_, 7);
-  this->color02_chr.addDescriptor(color_unitless_descriptor02);
-  BLEDescriptor color_unitless_descriptor03("2904", this->color_format_, 7);
-  this->color03_chr.addDescriptor(color_unitless_descriptor03);
-  BLEDescriptor color_unitless_descriptor04("2904", this->color_format_, 7);
-  this->color04_chr.addDescriptor(color_unitless_descriptor04);
 
-  BLEDescriptor trans_unitless_descriptor("2904", this->cmd_format_, 7);
-  this->transition_chr.addDescriptor(trans_unitless_descriptor);
-  BLEDescriptor blending_unitless_descriptor("2904", this->cmd_format_, 7);
-  this->colormap_chr.addDescriptor(blending_unitless_descriptor);
-  BLEDescriptor fluctuation_unitless_descriptor("2904", this->cmd_format_, 7);
-  this->lighting_mode_chr.addDescriptor(fluctuation_unitless_descriptor);
+  BLEDescriptor source_unitless_descriptor("2904", this->cmd_format_, 7);
+  this->source_chr.addDescriptor(source_unitless_descriptor);
+  BLEDescriptor colormap_unitless_descriptor("2904", this->cmd_format_, 7);
+  this->colormap_chr.addDescriptor(colormap_unitless_descriptor);
+  BLEDescriptor func_unitless_descriptor("2904", this->cmd_format_, 7);
+  this->intensity_func_chr.addDescriptor(func_unitless_descriptor);
 }
 
 NeoPixelService::~NeoPixelService(){};
+
+// void NeoPixelService::init() {
+//   this->init(20U, uint8_t Timer,
+//              uint8_t::TravelingWave,
+//              colormap::ColormapId::Hsv);
+// }
+void NeoPixelService::init(uint8_t brightness, uint8_t sensor_id,
+                           uint8_t intensity_id, uint8_t cmap) {
+  this->brightness_chr.writeValue(brightness);
+  this->num_pixels_chr.writeValue(NUM_PIXELS);
+  this->source_chr.writeValue(sensor_id);
+  this->intensity_func_chr.writeValue(intensity_id);
+  this->colormap_chr.writeValue(cmap);
+}
 
 }  // namespace ble
 

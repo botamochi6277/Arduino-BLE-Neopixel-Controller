@@ -151,8 +151,8 @@ enum class IntensityFuncId : unsigned char {
 float travelingWave(float freq, float time, float position, float speed,
                     float initial_phase) {
   return 0.5f *
-         sinf(2.0f * M_PI * freq * (time - (position / (speed + 1e-9f))) +
-              0.5f);
+             sinf(2.0f * M_PI * freq * (time - (position / (speed + 1e-9f)))) +
+         0.5f;
 }
 
 // pulse function
@@ -233,7 +233,7 @@ void PixelManager::setIntensity(float value, IntensityFuncId func_id) {
       break;
     case IntensityFuncId::TravelingWave:
       for (size_t i = 0; i < NUM_PIXELS; i++) {
-        travelingWave(1.0f, value, this->pixel_units[i].position(), 1.0f, 0.0f);
+        travelingWave(0.1f, value, this->pixel_units[i].position(), 0.1f, 0.0f);
       }
       break;
     default:

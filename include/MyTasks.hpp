@@ -17,24 +17,6 @@ void updateColorCache(led_strip::PixelManager &manager,
   if (pixel_srv.brightness_chr.written()) {
     pixels.setBrightness(pixel_srv.brightness_chr.value());
   }
-
-  // color parameter was changed, updating static colors
-  if (pixel_srv.color01_chr.written() || pixel_srv.color02_chr.written() ||
-      pixel_srv.color03_chr.written() || pixel_srv.color04_chr.written() ||
-      pixel_srv.colormap_chr.written() || pixel_srv.num_colors_chr.written() ||
-      loop_count == 0) {
-    // update clock
-
-    // assign palette colors
-    manager.setPaletteColor(0, pixel_srv.color01_chr.value());
-    manager.setPaletteColor(1, pixel_srv.color02_chr.value());
-    manager.setPaletteColor(2, pixel_srv.color03_chr.value());
-    manager.setPaletteColor(3, pixel_srv.color04_chr.value());
-
-    // led_strip::blend(transited_colors, palette, pixels.numPixels(),
-    //                  pixel_srv.num_colors_chr.value(),
-    //                  pixel_srv.colormap_chr.value());
-  }
 }
 
 // void setHeatColors(led_strip::PixelManager &manager, float temperature) {
@@ -64,7 +46,7 @@ void setPixelColors(led_strip::PixelManager &manager,
   }
 }
 
-enum class SensorSource { Timer, ACC };
+enum class SensorSource : unsigned char { Timer, Cycle, ACC };
 
 void updatePixelColors(led_strip::PixelManager &manager, SensorSource sensor,
                        led_strip::IntensityFuncId func_id,
@@ -75,7 +57,9 @@ void updatePixelColors(led_strip::PixelManager &manager, SensorSource sensor,
     case SensorSource::Timer:
       sensor_value = millis() / 1.0e3f;
       break;
-
+    case SensorSource::Cycle:
+      sensor_value = 0.5f * sinf(2.0f * M_PI * 1.0f * millis() / 1.0e3f) + 0.5f;
+      break;
     default:
       break;
   }
