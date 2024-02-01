@@ -44,7 +44,11 @@ enum class ColormapId : unsigned char {
   Viridis,
 };
 
-enum class CyclicColormap : unsigned char { Hsv, Twilight, TwilightShifted };
+String colormap_name(ColormapId cmap_id) {
+  static String names[] = {"Hsv",    "Twilight", "TwilightS", "Cool",   "Hot",
+                           "Wistia", "Spectral", "CoolWarm",  "Viridis"};
+  return names[static_cast<uint8_t>(cmap_id)];
+}
 
 void assignHsvHueColor(float &r, float &g, float &b, float intensity,
                        float initial_phase) {
@@ -170,8 +174,6 @@ void assignWistiaColor(float &r, float &g, float &b, float intensity) {
   g = constrain(g, 0.0f, 1.0f);
   b = constrain(b, 0.0f, 1.0f);
 }
-
-enum class DivergingColormap : unsigned char { Spectral, CoolWarm, Viridis };
 
 void assignSpectralColor(float &r, float &g, float &b, float intensity) {
   static const float coff_r[] = {6.4498e-01, 1.1186e+00, 4.1186e+00,
