@@ -146,7 +146,8 @@ enum class IntensityFuncId : unsigned char {
   Heat,  // dissolve
   Wipe,
   TravelingWave,
-  TravelingPulse
+  TravelingPulse,
+  Cycle
 };
 float travelingWave(float freq, float time, float position, float speed,
                     float initial_phase) {
@@ -160,61 +161,91 @@ float travelingWave(float freq, float time, float position, float speed,
 class PixelManager {
  private:
   //  anchor points
-  uint32_t current_colors[NUM_PIXELS];  // new color buffer
-  uint32_t start_colors[NUM_PIXELS];
-  uint32_t transited_colors[NUM_PIXELS];
-  uint32_t cache_colors[NUM_PIXELS];
-  uint32_t palette[4];
-  float transition_weights[NUM_PIXELS];
-  uint32_t fluctuation_colors[NUM_PIXELS];
+  // uint32_t current_colors[NUM_PIXELS];  // new color buffer
+  // uint32_t start_colors[NUM_PIXELS];
+  // uint32_t transited_colors[NUM_PIXELS];
+  // uint32_t cache_colors[NUM_PIXELS];
+
+  // float transition_weights[NUM_PIXELS];
+  // uint32_t fluctuation_colors[NUM_PIXELS];
+
+  colormap::ColormapId cmap_;
 
   float transition_start_sec_;
   float intensity_[NUM_PIXELS];
+
+  IntensityFuncId func_id_;
+  //  params to compute intensity
+  float wave_width_;  // the wave width of wipe's blur or pulse wave
+  float wave_freq_;   // wave freq of traveling_wave, cycle
+  float wave_speed_;  // speed of wave
 
  public:
   PixelManager();
   PixelManager(float pitch);
   color::PixelUnit pixel_units[NUM_PIXELS];
 
-  void setPaletteColor(uint8_t index, unsigned int color);
-  unsigned int getPaletteColor(uint8_t index);
+  void setColormap(colormap::ColormapId id);
+  void setColormap(uint8_t id);
 
-  void setCurrentColor(uint8_t index, unsigned int color);
-  void setFluctuationColor(uint8_t index, unsigned int color);
-  void blend(uint32_t hsb_colors[], uint32_t palette_hsb[], uint16_t num_pixels,
-             uint8_t palette_size = 2, uint8_t blend_type = 0);
+  void setIntensityFuncId(IntensityFuncId id);
+  void setIntensityFuncId(uint8_t id);
+
+  void setWaveWidth(float width);
+  void setWaveWidth(uint8_t width, float min, float max);
+
+  void setWaveFreq(float freq);
+  void setWaveFreq(uint8_t freq, float min, float max);
+
+  void setWaveSpeed(float speed);
+  void setWaveSpeed(uint8_t speed, float min, float max);
 
   void setIntensity(float intensity[]);
-  void setIntensity(float value, IntensityFuncId func_id);
+  void computeAndSetIntensity(float value);
+
   void setColor();  // set color with intensity[]
   void setColor(colormap::ColormapId cmap);
 };
 
-PixelManager::PixelManager() {
-  for (size_t i = 0; i < NUM_PIXELS; i++) {
-    this->pixel_units[i].setPosition(i * 1.0f / (NUM_PIXELS - 1));
-  }
-}
+PixelManager::PixelManager() { PixelManager(1.0f / (NUM_PIXELS - 1)); }
 
 PixelManager::PixelManager(float pitch) {
   for (size_t i = 0; i < NUM_PIXELS; i++) {
     this->pixel_units[i].setPosition(i * pitch);
+    this->intensity_[i] = 0.0f;
   }
+  this->wave_width_ = 0.1f;
+  this->wave_freq_ = 1.0f;
+  this->wave_speed_ = 0.1f;
 }
 
-void PixelManager::setPaletteColor(uint8_t index, unsigned int color) {
-  this->palette[index] = color;
+void PixelManager::setColormap(colormap::ColormapId id) { this->cmap_ = id; }
+void PixelManager::setColormap(uint8_t id) {
+  this->setColormap(static_cast<colormap::ColormapId>(id));
+}
+void PixelManager::setIntensityFuncId(IntensityFuncId id) {
+  this->func_id_ = id;
+}
+void PixelManager::setIntensityFuncId(uint8_t id) {
+  this->setIntensityFuncId(static_cast<IntensityFuncId>(id));
 }
 
-unsigned int PixelManager::getPaletteColor(uint8_t index) {
-  return this->palette[index];
+void PixelManager::setWaveWidth(float width) { this->wave_width_ = width; }
+void PixelManager::setWaveWidth(uint8_t width, float min, float max) {
+  this->wave_width_ =
+      easing::remap(static_cast<float>(width), 0.0f, 255.0f, min, max);
 }
 
-void PixelManager::setCurrentColor(uint8_t index, unsigned int color) {
-  this->current_colors[index] = color;
+void PixelManager::setWaveFreq(float freq) { this->wave_freq_ = freq; }
+void PixelManager::setWaveFreq(uint8_t freq, float min, float max) {
+  this->wave_freq_ =
+      easing::remap(static_cast<float>(freq), 0.0f, 255.0f, min, max);
 }
-void PixelManager::setFluctuationColor(uint8_t index, unsigned int color) {
-  this->fluctuation_colors[index] = color;
+
+void PixelManager::setWaveSpeed(float speed) { this->wave_speed_ = speed; }
+void PixelManager::setWaveSpeed(uint8_t speed, float min, float max) {
+  this->wave_speed_ =
+      easing::remap(static_cast<float>(speed), 0.0f, 255.0f, min, max);
 }
 
 void PixelManager::setIntensity(float intensity[]) {
@@ -223,27 +254,42 @@ void PixelManager::setIntensity(float intensity[]) {
   }
 }
 
-void PixelManager::setIntensity(float value, IntensityFuncId func_id) {
-  switch (func_id) {
+void PixelManager::computeAndSetIntensity(float value) {
+  switch (this->func_id_) {
     case IntensityFuncId::Heat:
       dissolveWeight(this->intensity_, NUM_PIXELS, value);
       break;
     case IntensityFuncId::Wipe:
-      wipeWeight(this->intensity_, NUM_PIXELS, value, 0.1);
+      wipeWeight(this->intensity_, NUM_PIXELS, value, this->wave_width_,
+                 (this->wave_speed_ < 0.0f));
       break;
     case IntensityFuncId::TravelingWave:
       for (size_t i = 0; i < NUM_PIXELS; i++) {
-        travelingWave(0.1f, value, this->pixel_units[i].position(), 0.1f, 0.0f);
+        this->intensity_[i] = travelingWave(this->wave_freq_, value,
+                                            this->pixel_units[i].position(),
+                                            this->wave_speed_, 0.0f);
+      }
+      break;
+    case IntensityFuncId::Cycle:
+      for (size_t i = 0; i < NUM_PIXELS; i++) {
+        this->intensity_[i] =
+            0.5f * sinf(2.0f * M_PI * this->wave_freq_ * value) + 0.5f;
       }
       break;
     default:
       break;
   }
 }
-void PixelManager::setColor(colormap::ColormapId cmap) {
+
+void PixelManager::setColor() {
   for (size_t i = 0; i < NUM_PIXELS; i++) {
-    this->pixel_units[i].setCmapColor(this->intensity_[i], cmap);
+    this->pixel_units[i].setCmapColor(this->intensity_[i], this->cmap_);
   }
+}
+
+void PixelManager::setColor(colormap::ColormapId cmap) {
+  this->cmap_ = cmap;
+  this->setColor();
 }
 
 };  // namespace led_strip

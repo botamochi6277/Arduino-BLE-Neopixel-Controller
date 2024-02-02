@@ -10,13 +10,16 @@
 
 namespace tasks {
 
-void updateColorCache(led_strip::PixelManager &manager,
-                      ble::NeoPixelService &pixel_srv,
-                      Adafruit_NeoPixel &pixels) {
+void reflectParams(led_strip::PixelManager &manager,
+                   ble::NeoPixelService &pixel_srv, Adafruit_NeoPixel &pixels) {
   static unsigned int loop_count = 0;
   if (pixel_srv.brightness_chr.written()) {
     pixels.setBrightness(pixel_srv.brightness_chr.value());
   }
+  if (pixel_srv.wave_width_chr.written()) {
+  }
+
+  loop_count += 1;
 }
 
 // void setHeatColors(led_strip::PixelManager &manager, float temperature) {
@@ -57,15 +60,12 @@ void updatePixelColors(led_strip::PixelManager &manager, SensorSource sensor,
     case SensorSource::Timer:
       sensor_value = millis() / 1.0e3f;
       break;
-    case SensorSource::Cycle:
-      sensor_value = 0.5f * sinf(2.0f * M_PI * 1.0f * millis() / 1.0e3f) + 0.5f;
-      break;
     default:
       break;
   }
   // compute intensity
-  manager.setIntensity(sensor_value, func_id);
-  manager.setColor(cmap);
+  manager.computeAndSetIntensity(sensor_value);
+  manager.setColor();
 }
 
 }  // namespace tasks

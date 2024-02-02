@@ -120,15 +120,6 @@ void setup() {
   pixels.setBrightness(pixel_srv.brightness_chr.value());
   pixels.show();  // Turn OFF all pixels
 
-  // init color buffer
-  // for (size_t i = 0; i < NUM_PIXELS; i++) {
-  //   color_manager.setCurrentColor(i, color::hsbToHsbhex(0xff00, 0xff, 0x00));
-  // }
-  // // temporal
-  // for (size_t i = 0; i < NUM_PIXELS; i++) {
-  //   color_manager.setFluctuationColor(i, color_manager.getPaletteColor(3));
-  // }
-
   loop_count = 0;
 
   Tasks.add("BLE_polling", [] { BLE.poll(); })->startFps(10);
@@ -142,7 +133,7 @@ void setup() {
            [] {
              tasks::updatePixelColors(
                  color_manager,
-                 static_cast<tasks::SensorSource>(pixel_srv.source_chr.value()),
+                 static_cast<tasks::SensorSource>(pixel_srv.input_chr.value()),
                  static_cast<led_strip::IntensityFuncId>(
                      pixel_srv.intensity_func_chr.value()),
                  static_cast<colormap::ColormapId>(
