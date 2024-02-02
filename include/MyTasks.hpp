@@ -16,7 +16,24 @@ void reflectParams(led_strip::PixelManager &manager,
   if (pixel_srv.brightness_chr.written()) {
     pixels.setBrightness(pixel_srv.brightness_chr.value());
   }
+  if (pixel_srv.colormap_chr.written()) {
+    manager.setColormap(pixel_srv.colormap_chr.value());
+    pixel_srv.colormap_name_chr.writeValue(
+        colormap::colormap_name(manager.colormap()));
+  }
+  if (pixel_srv.intensity_func_chr.written()) {
+    manager.setIntensityFuncId(pixel_srv.intensity_func_chr.value());
+    // (todo) assign func name
+  }
+
   if (pixel_srv.wave_width_chr.written()) {
+    manager.setWaveWidth(pixel_srv.wave_width_chr.value(), 0.0f, 1.0f);
+  }
+  if (pixel_srv.wave_freq_chr.written()) {
+    manager.setWaveFreq(pixel_srv.wave_freq_chr.value(), 0.0f, 1.0f);
+  }
+  if (pixel_srv.wave_speed_chr.written()) {
+    manager.setWaveSpeed(pixel_srv.wave_speed_chr.value(), -1.0f, 1.0f);
   }
 
   loop_count += 1;
@@ -49,15 +66,13 @@ void setPixelColors(led_strip::PixelManager &manager,
   }
 }
 
-enum class SensorSource : unsigned char { Timer, Cycle, ACC };
+enum class SensorSource : unsigned char { Time, Cycle, ACC };
 
-void updatePixelColors(led_strip::PixelManager &manager, SensorSource sensor,
-                       led_strip::IntensityFuncId func_id,
-                       colormap::ColormapId cmap) {
+void updatePixelColors(led_strip::PixelManager &manager, SensorSource sensor) {
   // read sensor value
   float sensor_value = 0.0f;
   switch (sensor) {
-    case SensorSource::Timer:
+    case SensorSource::Time:
       sensor_value = millis() / 1.0e3f;
       break;
     default:

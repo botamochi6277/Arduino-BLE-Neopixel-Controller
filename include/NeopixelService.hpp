@@ -173,7 +173,7 @@ void NeoPixelService::init(uint8_t brightness, uint8_t sensor_id,
 
   this->wave_width_chr.setValue(128U);
   this->wave_freq_chr.setValue(128U);
-  this->wave_speed_chr.setValue(128U);
+  this->wave_speed_chr.setValue(172U);
 }
 
 }  // namespace ble

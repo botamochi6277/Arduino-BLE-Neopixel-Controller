@@ -66,7 +66,7 @@ void setup() {
 
   Serial.begin(115200);
 
-  for (size_t i = 0; i < 10; i++) {
+  for (size_t i = 0; i < 100; i++) {
     if (Serial) {
       break;
     }
@@ -95,8 +95,8 @@ void setup() {
   BLE.setDeviceName(local_name.c_str());
   BLE.setLocalName("NeoPixels");
   BLE.setAdvertisedService(pixel_srv);
-  pixel_srv.init(20U, static_cast<uint8_t>(tasks::SensorSource::Cycle),
-                 static_cast<uint8_t>(led_strip::IntensityFuncId::Heat),
+  pixel_srv.init(20U, static_cast<uint8_t>(tasks::SensorSource::Time),
+                 static_cast<uint8_t>(led_strip::IntensityFuncId::Cycle),
                  static_cast<uint8_t>(colormap::ColormapId::Hsv));
   // add service
   BLE.addService(pixel_srv);
@@ -122,7 +122,14 @@ void setup() {
 
   loop_count = 0;
 
-  Tasks.add("BLE_polling", [] { BLE.poll(); })->startFps(10);
+  Tasks
+      .add("BLE_polling",
+           [] {
+             BLE.poll();
+             tasks::reflectParams(color_manager, pixel_srv, pixels);
+             digitalWrite(LEDB, !digitalRead(LEDB));
+           })
+      ->startFps(10);
 
 #ifdef SEEED_XIAO_NRF52840_SENSE
   Tasks.add("Heart_beats", [] { digitalWrite(LEDG, !digitalRead(LEDG)); })
@@ -133,11 +140,7 @@ void setup() {
            [] {
              tasks::updatePixelColors(
                  color_manager,
-                 static_cast<tasks::SensorSource>(pixel_srv.input_chr.value()),
-                 static_cast<led_strip::IntensityFuncId>(
-                     pixel_srv.intensity_func_chr.value()),
-                 static_cast<colormap::ColormapId>(
-                     pixel_srv.colormap_chr.value()));
+                 static_cast<tasks::SensorSource>(pixel_srv.input_chr.value()));
            })
       ->startFps(24.0);
   Tasks

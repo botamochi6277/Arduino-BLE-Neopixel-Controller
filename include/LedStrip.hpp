@@ -185,6 +185,7 @@ class PixelManager {
   PixelManager(float pitch);
   color::PixelUnit pixel_units[NUM_PIXELS];
 
+  colormap::ColormapId colormap();
   void setColormap(colormap::ColormapId id);
   void setColormap(uint8_t id);
 
@@ -219,6 +220,7 @@ PixelManager::PixelManager(float pitch) {
   this->wave_speed_ = 0.1f;
 }
 
+colormap::ColormapId PixelManager::colormap() { return this->cmap_; };
 void PixelManager::setColormap(colormap::ColormapId id) { this->cmap_ = id; }
 void PixelManager::setColormap(uint8_t id) {
   this->setColormap(static_cast<colormap::ColormapId>(id));
