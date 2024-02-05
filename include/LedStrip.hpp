@@ -147,7 +147,8 @@ enum class IntensityFuncId : unsigned char {
   Wipe,
   TravelingWave,
   TravelingPulse,
-  Cycle
+  Cycle,
+  Spiral
 };
 float travelingWave(float freq, float time, float position, float speed,
                     float initial_phase) {
@@ -160,15 +161,6 @@ float travelingWave(float freq, float time, float position, float speed,
 
 class PixelManager {
  private:
-  //  anchor points
-  // uint32_t current_colors[NUM_PIXELS];  // new color buffer
-  // uint32_t start_colors[NUM_PIXELS];
-  // uint32_t transited_colors[NUM_PIXELS];
-  // uint32_t cache_colors[NUM_PIXELS];
-
-  // float transition_weights[NUM_PIXELS];
-  // uint32_t fluctuation_colors[NUM_PIXELS];
-
   colormap::ColormapId cmap_;
 
   float transition_start_sec_;
@@ -197,6 +189,7 @@ class PixelManager {
 
   void setWaveFreq(float freq);
   void setWaveFreq(uint8_t freq, float min, float max);
+  inline float waveFreq() { return this->wave_freq_; }
 
   void setWaveSpeed(float speed);
   void setWaveSpeed(uint8_t speed, float min, float max);
@@ -216,7 +209,7 @@ PixelManager::PixelManager(float pitch) {
     this->intensity_[i] = 0.0f;
   }
   this->wave_width_ = 0.1f;
-  this->wave_freq_ = 1.0f;
+  this->wave_freq_ = 0.5f;
   this->wave_speed_ = 0.1f;
 }
 
@@ -278,6 +271,15 @@ void PixelManager::computeAndSetIntensity(float value) {
             0.5f * sinf(2.0f * M_PI * this->wave_freq_ * value) + 0.5f;
       }
       break;
+    case IntensityFuncId::Spiral:
+      for (size_t i = 0; i < NUM_PIXELS; i++) {
+        this->intensity_[i] =
+            0.5f * sinf(2.0f * M_PI * this->wave_freq_ * value +
+                        2.0f * M_PI * ((float)i / NUM_PIXELS)) +
+            0.5f;
+      }
+      break;
+
     default:
       break;
   }

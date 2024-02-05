@@ -13,8 +13,8 @@
 #define BLE_GATT_CPF_UNIT_METER_PER_S 0x2712   // velocity(m/s)
 #define BLE_GATT_CPF_UNIT_METER_PER_SS 0x2713  // acc(m/s^2)
 
-#define BLE_GATT_CPF_UNIT_RAD 0x2720  // angle(radian)
-
+#define BLE_GATT_CPF_UNIT_RAD 0x2720      // angle(radian)
+#define BLE_GATT_CPF_UNIT_HERTZ 0x2722    // frequency(Hertz)
 #define BLE_GATT_CPF_UNIT_CELSIUS 0x272F  // Celsius temperature
 
 #define BLE_GATT_CPF_UNIT_RAD_PER_S 0x2743  // angular velocity (rad/s)

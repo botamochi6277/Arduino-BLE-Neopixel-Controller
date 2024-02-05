@@ -11,29 +11,30 @@
 namespace tasks {
 
 void reflectParams(led_strip::PixelManager &manager,
-                   ble::NeoPixelService &pixel_srv, Adafruit_NeoPixel &pixels) {
+                   ble::NeoPixelService &pixel_srv, Adafruit_NeoPixel &pixels,
+                   bool is_on_written = true) {
   static unsigned int loop_count = 0;
-  if (pixel_srv.brightness_chr.written()) {
+  if (!is_on_written | pixel_srv.brightness_chr.written()) {
     pixels.setBrightness(pixel_srv.brightness_chr.value());
   }
-  if (pixel_srv.colormap_chr.written()) {
+  if (!is_on_written | pixel_srv.colormap_chr.written()) {
     manager.setColormap(pixel_srv.colormap_chr.value());
-    pixel_srv.colormap_name_chr.writeValue(
-        colormap::colormap_name(manager.colormap()));
+    // pixel_srv.colormap_name_chr.writeValue(
+    //     colormap::colormap_name(manager.colormap()));
   }
-  if (pixel_srv.intensity_func_chr.written()) {
+  if (!is_on_written | pixel_srv.intensity_func_chr.written()) {
     manager.setIntensityFuncId(pixel_srv.intensity_func_chr.value());
     // (todo) assign func name
   }
 
-  if (pixel_srv.wave_width_chr.written()) {
-    manager.setWaveWidth(pixel_srv.wave_width_chr.value(), 0.0f, 1.0f);
+  if (!is_on_written | pixel_srv.wave_width_chr.written()) {
+    manager.setWaveWidth(pixel_srv.wave_width_chr.valueLE());
   }
-  if (pixel_srv.wave_freq_chr.written()) {
-    manager.setWaveFreq(pixel_srv.wave_freq_chr.value(), 0.0f, 1.0f);
+  if (!is_on_written | pixel_srv.wave_freq_chr.written()) {
+    manager.setWaveFreq(pixel_srv.wave_freq_chr.valueLE());
   }
-  if (pixel_srv.wave_speed_chr.written()) {
-    manager.setWaveSpeed(pixel_srv.wave_speed_chr.value(), -1.0f, 1.0f);
+  if (!is_on_written | pixel_srv.wave_speed_chr.written()) {
+    manager.setWaveSpeed(pixel_srv.wave_speed_chr.valueLE());
   }
 
   loop_count += 1;

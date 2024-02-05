@@ -98,6 +98,9 @@ void setup() {
   pixel_srv.init(20U, static_cast<uint8_t>(tasks::SensorSource::Time),
                  static_cast<uint8_t>(led_strip::IntensityFuncId::Cycle),
                  static_cast<uint8_t>(colormap::ColormapId::Hsv));
+  tasks::reflectParams(color_manager, pixel_srv, pixels,
+                       false);  // reflect initial values
+
   // add service
   BLE.addService(pixel_srv);
 
@@ -127,12 +130,20 @@ void setup() {
            [] {
              BLE.poll();
              tasks::reflectParams(color_manager, pixel_srv, pixels);
+#ifdef SEEED_XIAO_NRF52840_SENSE
              digitalWrite(LEDB, !digitalRead(LEDB));
+#endif
            })
       ->startFps(10);
 
 #ifdef SEEED_XIAO_NRF52840_SENSE
-  Tasks.add("Heart_beats", [] { digitalWrite(LEDG, !digitalRead(LEDG)); })
+  Tasks
+      .add("Heart_beats",
+           [] {
+             digitalWrite(LEDG, !digitalRead(LEDG));
+             Serial.print("Freq: ");
+             Serial.println(color_manager.waveFreq(), 4);
+           })
       ->startFps(1.0);
 #endif
   Tasks
