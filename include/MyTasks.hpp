@@ -3,6 +3,9 @@
 
 #include <Adafruit_NeoPixel.h>
 #include <TaskManager.h>
+#ifdef LSM6DS3_ENABLED
+#include "LSM6DS3.h"  // IMU chip
+#endif
 
 #include "Colormap.hpp"
 #include "LedStrip.hpp"
@@ -40,26 +43,6 @@ void reflectParams(led_strip::PixelManager &manager,
   loop_count += 1;
 }
 
-// void setHeatColors(led_strip::PixelManager &manager, float temperature) {
-//   for (uint16_t i = 0; i < NUM_PIXELS; i++) {
-//     manager.pixel_units[i].setHeatColor(temperature);
-//   }
-// }
-
-// void updatePeriodicColors(led_strip::PixelManager &manager, uint8_t colormap,
-//                           float time, float freq, float wave_length) {
-//   // freq
-//   // wavelength
-//   // ξ＝a sin {ω(t－x/v)＋ε}
-//   for (uint16_t i = 0; i < NUM_PIXELS; i++) {
-//     float initial_phase = 2.0f * M_PI * i / NUM_PIXELS;
-//     manager.pixel_units[i].setPeriodicColor(
-//         time, 1.0 / freq, initial_phase,
-//         static_cast<colormap::CyclicColormap>(colormap));
-//     // manager.pixel_units[i].setHeatColor(temperature);
-//   }
-// }
-
 void setPixelColors(led_strip::PixelManager &manager,
                     Adafruit_NeoPixel &pixels) {
   for (uint16_t i = 0; i < pixels.numPixels(); i++) {
@@ -67,13 +50,23 @@ void setPixelColors(led_strip::PixelManager &manager,
   }
 }
 
-enum class SensorSource : unsigned char { Time, Cycle, ACC };
+enum class InputSource : unsigned char {
+  Time,
+  AccX,
+  AccY,
+  AccZ,
+  AccMAG,
+  GyroX,
+  GyroY,
+  GyroZ
+};
 
-void updatePixelColors(led_strip::PixelManager &manager, SensorSource sensor) {
+void updatePixelColors(led_strip::PixelManager &manager,
+                       InputSource input_src) {
   // read sensor value
   float sensor_value = 0.0f;
-  switch (sensor) {
-    case SensorSource::Time:
+  switch (input_src) {
+    case InputSource::Time:
       sensor_value = millis() / 1.0e3f;
       break;
     default:
@@ -83,6 +76,47 @@ void updatePixelColors(led_strip::PixelManager &manager, SensorSource sensor) {
   manager.computeAndSetIntensity(sensor_value);
   manager.setColor();
 }
+#ifdef LSM6DS3_ENABLED
+void updatePixelColors(led_strip::PixelManager &manager, LSM6DS3 &imu,
+                       InputSource input_src) {
+  // read sensor value
+  float sensor_value = 0.0f;
+  switch (input_src) {
+    case InputSource::Time:
+      sensor_value = millis() / 1.0e3f;
+      break;
+    case InputSource::AccX:
+      sensor_value =
+          easing::remap(imu.readFloatAccelX(), -2.0f, 2.0f, -1.0f, 1.0f);
+      break;
+    case InputSource::AccY:
+      sensor_value =
+          easing::remap(imu.readFloatAccelY(), -2.0f, 2.0f, -1.0f, 1.0f);
+      break;
+    case InputSource::AccZ:
+      sensor_value =
+          easing::remap(imu.readFloatAccelZ(), -2.0f, 2.0f, -1.0f, 1.0f);
+      break;
+    case InputSource::GyroX:
+      sensor_value =
+          easing::remap(imu.readFloatGyroX(), -180.0f, 180.0f, -1.0f, 1.0f);
+      break;
+    case InputSource::GyroY:
+      sensor_value =
+          easing::remap(imu.readFloatGyroY(), -180.0f, 180.0f, -1.0f, 1.0f);
+      break;
+    case InputSource::GyroZ:
+      sensor_value =
+          easing::remap(imu.readFloatGyroZ(), -180.0f, 180.0f, -1.0f, 1.0f);
+      break;
+    default:
+      break;
+  }
+  // compute intensity
+  manager.computeAndSetIntensity(sensor_value);
+  manager.setColor();
+}
+#endif
 
 }  // namespace tasks
 

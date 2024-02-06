@@ -201,7 +201,8 @@ class PixelManager {
   void setColor(colormap::ColormapId cmap);
 };
 
-PixelManager::PixelManager() { PixelManager(1.0f / (NUM_PIXELS - 1)); }
+PixelManager::PixelManager()
+    : PixelManager(1.0f / static_cast<float>(NUM_PIXELS - 1)) {}
 
 PixelManager::PixelManager(float pitch) {
   for (size_t i = 0; i < NUM_PIXELS; i++) {

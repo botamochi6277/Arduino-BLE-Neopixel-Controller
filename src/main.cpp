@@ -95,7 +95,7 @@ void setup() {
   BLE.setDeviceName(local_name.c_str());
   BLE.setLocalName("NeoPixels");
   BLE.setAdvertisedService(pixel_srv);
-  pixel_srv.init(20U, static_cast<uint8_t>(tasks::SensorSource::Time),
+  pixel_srv.init(20U, static_cast<uint8_t>(tasks::InputSource::Time),
                  static_cast<uint8_t>(led_strip::IntensityFuncId::Cycle),
                  static_cast<uint8_t>(colormap::ColormapId::Hsv));
   tasks::reflectParams(color_manager, pixel_srv, pixels,
@@ -146,14 +146,26 @@ void setup() {
            })
       ->startFps(1.0);
 #endif
+#ifdef LSM6DS3_ENABLED
+  Tasks
+      .add("UpdateColorCache",
+           [] {
+             tasks::updatePixelColors(
+                 color_manager, my_imu,
+                 static_cast<tasks::InputSource>(pixel_srv.input_chr.value()));
+           })
+      ->startFps(24.0);
+#else
   Tasks
       .add("UpdateColorCache",
            [] {
              tasks::updatePixelColors(
                  color_manager,
-                 static_cast<tasks::SensorSource>(pixel_srv.input_chr.value()));
+                 static_cast<tasks::InputSource>(pixel_srv.input_chr.value()));
            })
       ->startFps(24.0);
+#endif
+
   Tasks
       .add("UpdatePixelColors",
            [] {
@@ -161,6 +173,7 @@ void setup() {
              pixels.show();
            })
       ->startFps(24.0);
+
   // #ifdef LSM6DS3_ENABLED
   //   Tasks
   //       .add("UpdateGyroColors",
