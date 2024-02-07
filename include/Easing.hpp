@@ -31,19 +31,23 @@ T remap(T x, T in_min, T in_max, T out_min, T out_max, bool clip = false) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
-float hardSigmoid(float x, float duration = 1.0, float scale = 1.0) {
-  if (x < 0.0) {
-    return 0.0;
-  } else if (0.0 <= x && x < duration) {
-    return (scale / duration) * x;
+float hardSigmoid(float x) {
+  if (x < -0.5f) {
+    return 0.0f;
+  } else if (x < 0.5f) {
+    return x + 0.5f;
   } else {
-    return scale;
+    return 1.0f;
   }
 }
 
+float hardSigmoidInOut(float x, float duration = 1.0f, float scale = 1.0f) {
+  return scale * hardSigmoid((x - 0.5f) / (duration + 1e-9f));
+}
+
 float trianglePulse(float x, float duration = 1.0, float scale = 1.0) {
-  return scale * (hardSigmoid(x, duration / 2.0, 1.0) -
-                  hardSigmoid(x - duration / 2.0, duration / 2.0, 1.0));
+  return scale * (hardSigmoid(2.0f * (x + 0.5f) / duration) -
+                  hardSigmoid(2.0f * (x - 0.5f) / duration));
 }
 
 float quadInOut(float x, float duration = 1.0f, float scale = 1.0f) {
