@@ -45,9 +45,9 @@ float hardSigmoidInOut(float x, float duration = 1.0f, float scale = 1.0f) {
   return scale * hardSigmoid((x - 0.5f) / (duration + 1e-9f));
 }
 
-float trianglePulse(float x, float duration = 1.0, float scale = 1.0) {
-  return scale * (hardSigmoid(2.0f * (x + 0.5f) / duration) -
-                  hardSigmoid(2.0f * (x - 0.5f) / duration));
+float trianglePulse(float x, float duration = 1.0f, float scale = 1.0f) {
+  return scale * (hardSigmoid((2.0f * (x + 0.5f)) / (duration + 1.0e-9f)) -
+                  hardSigmoid((2.0f * (x - 0.5f)) / (duration + 1.0e-9f)));
 }
 
 float quadInOut(float x, float duration = 1.0f, float scale = 1.0f) {

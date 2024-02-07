@@ -70,10 +70,10 @@ void wipeWeight(float weights[], uint16_t num_pixels, float progress_ratio,
   for (uint16_t index = 0; index < num_pixels; index++) {
     auto r = static_cast<float>(index) / num_pixels;
     if (!is_backward) {
-      weights[index] = easing::hardSigmoid(
+      weights[index] = easing::hardSigmoidInOut(
           (1.0f - r) + (1.0f + blur_width) * progress_ratio - 1.0f, blur_width);
     } else {
-      weights[index] = easing::hardSigmoid(
+      weights[index] = easing::hardSigmoidInOut(
           r + (1.0f + blur_width) * progress_ratio - 1.0f, blur_width);
     }
   }
@@ -145,8 +145,10 @@ bool slideEasing(uint32_t hsb_colors[], uint32_t hsb_from[], uint32_t hsb_to[],
 enum class IntensityFuncId : unsigned char {
   Heat,  // dissolve
   Wipe,
+  Pulse,
   TravelingWave,
-  TravelingPulse,
+  // TravelingPulse,
+  StationaryWave,
   Cycle,
   Spiral
 };
@@ -158,6 +160,9 @@ float travelingWave(float freq, float time, float position, float speed,
 }
 
 // pulse function
+// float travelingPulse(float time, float position, float speed, float width) {
+//   return easing::trianglePulse(position + time * speed, width);
+// }
 
 class PixelManager {
  private:
@@ -258,6 +263,12 @@ void PixelManager::computeAndSetIntensity(float value) {
     case IntensityFuncId::Wipe:
       wipeWeight(this->intensity_, NUM_PIXELS, value, this->wave_width_,
                  (this->wave_speed_ < 0.0f));
+      break;
+    case IntensityFuncId::Pulse:
+      for (size_t i = 0; i < NUM_PIXELS; i++) {
+        this->intensity_[i] = easing::trianglePulse(
+            this->pixel_units[i].position() - value, this->wave_width_);
+      }
       break;
     case IntensityFuncId::TravelingWave:
       for (size_t i = 0; i < NUM_PIXELS; i++) {
