@@ -44,6 +44,13 @@ class NeoPixelService : public BLEService {
       0x01,
       0x00,
       0x00};
+  const uint8_t string_format_[7] = {BLE_GATT_CPF_FORMAT_UTF8S,
+                                     0,
+                                     (uint8_t)BLE_GATT_CPF_UNIT_UNITLESS,
+                                     (uint8_t)(BLE_GATT_CPF_UNIT_UNITLESS >> 8),
+                                     0x01,
+                                     0x00,
+                                     0x00};
 
  public:
   // general
@@ -57,11 +64,12 @@ class NeoPixelService : public BLEService {
   // color
   // BLEUnsignedCharCharacteristic num_colors_chr;
   BLEUnsignedCharCharacteristic colormap_chr;
-  // BLEStringCharacteristic colormap_name_chr;
+  BLEStringCharacteristic colormap_name_chr;
 
   // intensity
   BLEUnsignedCharCharacteristic intensity_func_chr;
-  // BLEStringCharacteristic intensity_name_chr;
+  BLEStringCharacteristic intensity_name_chr;
+
   // intensity params
   BLEFloatCharacteristic wave_width_chr;
   BLEFloatCharacteristic wave_freq_chr;
@@ -69,7 +77,7 @@ class NeoPixelService : public BLEService {
 
   // inputs
   BLEUnsignedCharCharacteristic input_chr;
-  // BLEStringCharacteristic input_name_chr;
+  BLEStringCharacteristic input_name_chr;
 
   NeoPixelService(/* args */);
   ~NeoPixelService();
@@ -86,21 +94,20 @@ NeoPixelService::NeoPixelService()
       brightness_chr("19B10012-E8F2-537E-4F6C-D104768A1214",
                      BLERead | BLEWrite),
       colormap_chr("19B10021-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
-      // colormap_name_chr("19B10022-E8F2-537E-4F6C-D104768A1214",
-      //                   BLERead | BLEWrite, 12),
+      colormap_name_chr("19B10022-E8F2-537E-4F6C-D104768A1214",
+                        BLERead | BLENotify, 12),
       intensity_func_chr("19B10031-E8F2-537E-4F6C-D104768A1214",
                          BLERead | BLEWrite),
-      // intensity_name_chr("19B10032-E8F2-537E-4F6C-D104768A1214",
-      //                    BLERead | BLEWrite, 8),
+      intensity_name_chr("19B10032-E8F2-537E-4F6C-D104768A1214",
+                         BLERead | BLENotify, 12),
       wave_width_chr("19B10033-E8F2-537E-4F6C-D104768A1214",
                      BLERead | BLEWrite),
       wave_freq_chr("19B10034-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
       wave_speed_chr("19B10034-E8F2-537E-4F6C-D104768A1214",
                      BLERead | BLEWrite),
-      input_chr("19B10041-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite)
-// input_name_chr("19B10042-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite,
-//                8)
-{
+      input_chr("19B10041-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
+      input_name_chr("19B10042-E8F2-537E-4F6C-D104768A1214",
+                     BLERead | BLENotify, 12) {
   // add characteristics to service
   this->addCharacteristic(this->timer_chr);
   this->addCharacteristic(this->imu_available_chr);
@@ -109,17 +116,17 @@ NeoPixelService::NeoPixelService()
   this->addCharacteristic(this->brightness_chr);
 
   this->addCharacteristic(this->colormap_chr);
-  // this->addCharacteristic(this->colormap_name_chr);
+  this->addCharacteristic(this->colormap_name_chr);
 
   this->addCharacteristic(this->intensity_func_chr);
-  // this->addCharacteristic(this->intensity_name_chr);
+  this->addCharacteristic(this->intensity_name_chr);
 
   this->addCharacteristic(this->wave_width_chr);
   this->addCharacteristic(this->wave_freq_chr);
   this->addCharacteristic(this->wave_speed_chr);
 
   this->addCharacteristic(this->input_chr);
-  // this->addCharacteristic(this->input_name_chr);
+  this->addCharacteristic(this->input_name_chr);
 
   // User Description
   // system property characteristic
@@ -137,14 +144,14 @@ NeoPixelService::NeoPixelService()
   // colormap
   BLEDescriptor cmap_descriptor("2901", "colormap::id");
   this->colormap_chr.addDescriptor(cmap_descriptor);
-  // BLEDescriptor cmap_name_descriptor("2901", "colormap::name");
-  // this->colormap_name_chr.addDescriptor(cmap_name_descriptor);
+  BLEDescriptor cmap_name_descriptor("2901", "colormap::name");
+  this->colormap_name_chr.addDescriptor(cmap_name_descriptor);
 
   // intensity
   BLEDescriptor i_func_descriptor("2901", "intensity_func::id");
   this->intensity_func_chr.addDescriptor(i_func_descriptor);
-  // BLEDescriptor func_name_descriptor("2901", "intensity_func::name");
-  // this->intensity_name_chr.addDescriptor(func_name_descriptor);
+  BLEDescriptor func_name_descriptor("2901", "intensity_func::name");
+  this->intensity_name_chr.addDescriptor(func_name_descriptor);
 
   BLEDescriptor wave_width_descriptor("2901", "intensity_param::wave_width");
   this->wave_width_chr.addDescriptor(wave_width_descriptor);
@@ -156,8 +163,8 @@ NeoPixelService::NeoPixelService()
   // inputs
   BLEDescriptor input_descriptor("2901", "input::id");
   this->input_chr.addDescriptor(input_descriptor);
-  // BLEDescriptor input_name_descriptor("2901", "input::name");
-  // this->input_name_chr.addDescriptor(input_name_descriptor);
+  BLEDescriptor input_name_descriptor("2901", "input::name");
+  this->input_name_chr.addDescriptor(input_name_descriptor);
 
   // Format Description
   BLEDescriptor millisec_descriptor("2904", this->msec_format_, 7);
@@ -174,10 +181,14 @@ NeoPixelService::NeoPixelService()
   // colormap
   BLEDescriptor colormap_enum_descriptor("2904", this->cmd_format_, 7);
   this->colormap_chr.addDescriptor(colormap_enum_descriptor);
+  BLEDescriptor str_colormap_format("2904", this->string_format_, 7);
+  this->colormap_name_chr.addDescriptor(str_colormap_format);
 
   // intensity
   BLEDescriptor func_enum_descriptor("2904", this->cmd_format_, 7);
   this->intensity_func_chr.addDescriptor(func_enum_descriptor);
+  BLEDescriptor str_func_format("2904", this->string_format_, 7);
+  this->intensity_name_chr.addDescriptor(str_func_format);
 
   BLEDescriptor wave_w_f_descriptor("2904", this->unitless_format_, 7);
   this->wave_width_chr.addDescriptor(wave_w_f_descriptor);
@@ -191,6 +202,8 @@ NeoPixelService::NeoPixelService()
   // inputs
   BLEDescriptor inputs_enum_descriptor("2904", this->cmd_format_, 7);
   this->input_chr.addDescriptor(inputs_enum_descriptor);
+  BLEDescriptor str_input_format("2904", this->string_format_, 7);
+  this->input_name_chr.addDescriptor(str_input_format);
 }
 
 NeoPixelService::~NeoPixelService(){};
@@ -202,6 +215,9 @@ void NeoPixelService::init(uint8_t brightness, uint8_t sensor_id,
   this->input_chr.writeValue(sensor_id);
   this->intensity_func_chr.writeValue(intensity_id);
   this->colormap_chr.writeValue(cmap);
+
+  this->colormap_name_chr.writeValue(
+      colormap::colormap_name(static_cast<colormap::ColormapId>(cmap)));
 
   this->wave_width_chr.writeValueLE(0.2f);
   this->wave_freq_chr.writeValueLE(0.5f);

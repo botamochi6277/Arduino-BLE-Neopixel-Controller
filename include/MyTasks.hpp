@@ -13,6 +13,23 @@
 
 namespace tasks {
 
+enum class InputSource : unsigned char {
+  Time,
+  AccX,
+  AccY,
+  AccZ,
+  AccMAG,
+  GyroX,
+  GyroY,
+  GyroZ
+};
+String input_name(InputSource id) {
+  static String names[] = {
+      "Time", "AccX", "AccY", "AccZ", "AccMAG", "GyroX", "GyroY", "GyroZ",
+  };
+  return names[static_cast<uint8_t>(id)];
+}
+
 void reflectParams(led_strip::PixelManager &manager,
                    ble::NeoPixelService &pixel_srv, Adafruit_NeoPixel &pixels,
                    bool is_on_written = true) {
@@ -22,12 +39,13 @@ void reflectParams(led_strip::PixelManager &manager,
   }
   if (!is_on_written | pixel_srv.colormap_chr.written()) {
     manager.setColormap(pixel_srv.colormap_chr.value());
-    // pixel_srv.colormap_name_chr.writeValue(
-    //     colormap::colormap_name(manager.colormap()));
+    pixel_srv.colormap_name_chr.writeValue(
+        colormap::colormap_name(manager.colormap()));
   }
   if (!is_on_written | pixel_srv.intensity_func_chr.written()) {
     manager.setIntensityFuncId(pixel_srv.intensity_func_chr.value());
-    // (todo) assign func name
+    pixel_srv.intensity_name_chr.writeValue(
+        led_strip::intensity_func_name(manager.intensity_func_id()));
   }
 
   if (!is_on_written | pixel_srv.wave_width_chr.written()) {
@@ -40,6 +58,11 @@ void reflectParams(led_strip::PixelManager &manager,
     manager.setWaveSpeed(pixel_srv.wave_speed_chr.valueLE());
   }
 
+  if (!is_on_written | pixel_srv.input_chr.written()) {
+    pixel_srv.input_name_chr.writeValue(
+        input_name(static_cast<InputSource>(pixel_srv.input_chr.written())));
+  }
+
   loop_count += 1;
 }
 
@@ -49,17 +72,6 @@ void setPixelColors(led_strip::PixelManager &manager,
     pixels.setPixelColor(i, manager.pixel_units[i].hex());
   }
 }
-
-enum class InputSource : unsigned char {
-  Time,
-  AccX,
-  AccY,
-  AccZ,
-  AccMAG,
-  GyroX,
-  GyroY,
-  GyroZ
-};
 
 void updatePixelColors(led_strip::PixelManager &manager,
                        InputSource input_src) {

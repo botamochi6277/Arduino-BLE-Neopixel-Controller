@@ -152,6 +152,13 @@ enum class IntensityFuncId : unsigned char {
   Cycle,
   Spiral
 };
+
+String intensity_func_name(IntensityFuncId id) {
+  static String names[] = {"Heat",           "Wipe",  "Pulse", "TravelingWave",
+                           "StationaryWave", "Cycle", "Spiral"};
+  return names[static_cast<uint8_t>(id)];
+}
+
 float travelingWave(float freq, float time, float position, float speed,
                     float initial_phase) {
   return 0.5f *
@@ -186,6 +193,7 @@ class PixelManager {
   void setColormap(colormap::ColormapId id);
   void setColormap(uint8_t id);
 
+  inline IntensityFuncId intensity_func_id() { return this->func_id_; };
   void setIntensityFuncId(IntensityFuncId id);
   void setIntensityFuncId(uint8_t id);
 
