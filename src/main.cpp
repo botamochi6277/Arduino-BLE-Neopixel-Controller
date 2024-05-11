@@ -135,6 +135,15 @@ void setup() {
 #endif
            })
       ->startFps(10);
+  // clock publishing task
+  Tasks
+      .add("Clock",
+           [] {
+             milli_sec = millis();
+             clock_sec = milli_sec * 1.0e-3f;
+             pixel_srv.timer_chr.writeValue(milli_sec);
+           })
+      ->startFps(10);
 
 #ifdef SEEED_XIAO_NRF52840_SENSE
   Tasks
@@ -195,19 +204,6 @@ void loop() {
   clock_sec = milli_sec * 1.0e-3f;
   pixel_srv.timer_chr.writeValue(milli_sec);
   Tasks.update();  // automatically execute tasks
-
-  // #ifdef LSM6DS3_ENABLED
-  //   Tasks["UpdateGyroColors"]->pause();
-  // #endif
-
-  // #ifdef LSM6DS3_ENABLED
-  // if (mode == tasks::PixelMode::GyroHeatmap) {
-  //   Tasks["UpdateGyroColors"]->play();
-  //   Tasks["UpdateRainbowColors"]->pause();
-  // }
-  // #endif
-
-  // Tasks["UpdatePixelColors"]->pause();
   delay(1);
   loop_count++;
 }

@@ -21,7 +21,8 @@ enum class InputSource : unsigned char {
   AccMAG,
   GyroX,
   GyroY,
-  GyroZ
+  GyroZ,
+  LENGTH
 };
 String input_name(InputSource id) {
   static String names[] = {
@@ -37,15 +38,25 @@ void reflectParams(led_strip::PixelManager &manager,
   if (!is_on_written | pixel_srv.brightness_chr.written()) {
     pixels.setBrightness(pixel_srv.brightness_chr.value());
   }
+
+  // colormap
   if (!is_on_written | pixel_srv.colormap_chr.written()) {
-    manager.setColormap(pixel_srv.colormap_chr.value());
-    pixel_srv.colormap_name_chr.writeValue(
-        colormap::colormap_name(manager.colormap()));
+    if (pixel_srv.colormap_chr.value() <
+        static_cast<uint8_t>(colormap::ColormapId::LENGTH)) {
+      manager.setColormap(pixel_srv.colormap_chr.value());
+      pixel_srv.colormap_name_chr.writeValue(
+          colormap::colormap_name(manager.colormap()));
+    }
   }
+
+  // intensity function
   if (!is_on_written | pixel_srv.intensity_func_chr.written()) {
-    manager.setIntensityFuncId(pixel_srv.intensity_func_chr.value());
-    pixel_srv.intensity_name_chr.writeValue(
-        led_strip::intensity_func_name(manager.intensity_func_id()));
+    if (pixel_srv.intensity_func_chr.value() <
+        static_cast<uint8_t>(led_strip::IntensityFuncId::LENGTH)) {
+      manager.setIntensityFuncId(pixel_srv.intensity_func_chr.value());
+      pixel_srv.intensity_name_chr.writeValue(
+          led_strip::intensity_func_name(manager.intensity_func_id()));
+    }
   }
 
   if (!is_on_written | pixel_srv.wave_width_chr.written()) {
@@ -58,9 +69,13 @@ void reflectParams(led_strip::PixelManager &manager,
     manager.setWaveSpeed(pixel_srv.wave_speed_chr.valueLE());
   }
 
+  // input source
   if (!is_on_written | pixel_srv.input_chr.written()) {
-    pixel_srv.input_name_chr.writeValue(
-        input_name(static_cast<InputSource>(pixel_srv.input_chr.written())));
+    if (pixel_srv.input_chr.value() <
+        static_cast<uint8_t>(InputSource::LENGTH)) {
+      pixel_srv.input_name_chr.writeValue(
+          input_name(static_cast<InputSource>(pixel_srv.input_chr.valueLE())));
+    }
   }
 
   loop_count += 1;

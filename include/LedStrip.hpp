@@ -150,7 +150,8 @@ enum class IntensityFuncId : unsigned char {
   // TravelingPulse,
   StationaryWave,
   Cycle,
-  Spiral
+  Spiral,
+  LENGTH
 };
 
 String intensity_func_name(IntensityFuncId id) {

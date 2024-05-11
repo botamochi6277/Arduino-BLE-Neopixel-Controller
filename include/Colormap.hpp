@@ -42,6 +42,7 @@ enum class ColormapId : unsigned char {
   Spectral,
   CoolWarm,
   Viridis,
+  LENGTH
 };
 
 String colormap_name(ColormapId cmap_id) {

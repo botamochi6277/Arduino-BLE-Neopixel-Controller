@@ -95,11 +95,11 @@ NeoPixelService::NeoPixelService()
                      BLERead | BLEWrite),
       colormap_chr("19B10021-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
       colormap_name_chr("19B10022-E8F2-537E-4F6C-D104768A1214",
-                        BLERead | BLENotify, 12),
+                        BLERead | BLENotify, 24),
       intensity_func_chr("19B10031-E8F2-537E-4F6C-D104768A1214",
                          BLERead | BLEWrite),
       intensity_name_chr("19B10032-E8F2-537E-4F6C-D104768A1214",
-                         BLERead | BLENotify, 12),
+                         BLERead | BLENotify, 24),
       wave_width_chr("19B10033-E8F2-537E-4F6C-D104768A1214",
                      BLERead | BLEWrite),
       wave_freq_chr("19B10034-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
@@ -107,7 +107,7 @@ NeoPixelService::NeoPixelService()
                      BLERead | BLEWrite),
       input_chr("19B10041-E8F2-537E-4F6C-D104768A1214", BLERead | BLEWrite),
       input_name_chr("19B10042-E8F2-537E-4F6C-D104768A1214",
-                     BLERead | BLENotify, 12) {
+                     BLERead | BLENotify, 24) {
   // add characteristics to service
   this->addCharacteristic(this->timer_chr);
   this->addCharacteristic(this->imu_available_chr);
