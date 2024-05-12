@@ -150,13 +150,13 @@ enum class IntensityFuncId : unsigned char {
   // TravelingPulse,
   StationaryWave,
   Cycle,
-  Spiral,
+  Shift,
   LENGTH
 };
 
 String intensity_func_name(IntensityFuncId id) {
   static String names[] = {"Heat",           "Wipe",  "Pulse", "TravelingWave",
-                           "StationaryWave", "Cycle", "Spiral"};
+                           "StationaryWave", "Cycle", "Shift"};
   return names[static_cast<uint8_t>(id)];
 }
 
@@ -292,12 +292,14 @@ void PixelManager::computeAndSetIntensity(float value) {
             0.5f * sinf(2.0f * M_PI * this->wave_freq_ * value) + 0.5f;
       }
       break;
-    case IntensityFuncId::Spiral:
+    case IntensityFuncId::Shift:
       for (size_t i = 0; i < NUM_PIXELS; i++) {
-        this->intensity_[i] =
-            0.5f * sinf(2.0f * M_PI * this->wave_freq_ * value +
-                        2.0f * M_PI * ((float)i / NUM_PIXELS)) +
-            0.5f;
+        float tmp = value + ((float)i / NUM_PIXELS);
+        if (tmp < 1.0f) {
+          this->intensity_[i] = tmp;
+        } else {
+          this->intensity_[i] = tmp - 1.0f;
+        }
       }
       break;
 

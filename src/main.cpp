@@ -95,8 +95,8 @@ void setup() {
   BLE.setDeviceName(local_name.c_str());
   BLE.setLocalName("NeoPixels");
   BLE.setAdvertisedService(pixel_srv);
-  pixel_srv.init(20U, static_cast<uint8_t>(tasks::InputSource::Time),
-                 static_cast<uint8_t>(led_strip::IntensityFuncId::Cycle),
+  pixel_srv.init(20U, static_cast<uint8_t>(tasks::DataSource::BeatSin05),
+                 static_cast<uint8_t>(led_strip::IntensityFuncId::Shift),
                  static_cast<uint8_t>(colormap::ColormapId::Hsv));
   tasks::reflectParams(color_manager, pixel_srv, pixels,
                        false);  // reflect initial values
@@ -161,7 +161,7 @@ void setup() {
            [] {
              tasks::updatePixelColors(
                  color_manager, my_imu,
-                 static_cast<tasks::InputSource>(pixel_srv.input_chr.value()));
+                 static_cast<tasks::DataSource>(pixel_srv.input_chr.value()));
            })
       ->startFps(24.0);
 #else
@@ -170,7 +170,7 @@ void setup() {
            [] {
              tasks::updatePixelColors(
                  color_manager,
-                 static_cast<tasks::InputSource>(pixel_srv.input_chr.value()));
+                 static_cast<tasks::DataSource>(pixel_srv.input_chr.value()));
            })
       ->startFps(24.0);
 #endif

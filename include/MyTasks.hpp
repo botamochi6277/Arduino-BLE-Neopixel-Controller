@@ -12,9 +12,14 @@
 #include "NeopixelService.hpp"
 
 namespace tasks {
-
-enum class InputSource : unsigned char {
-  Time,
+// (todo) separate as DataSource.hpp
+enum class DataSource : unsigned char {
+  BeatSin05,  // sine beat 5Hz
+  BeatSin10,
+  BeatSin20,
+  BeatSaw05,  // saw beat 5Hz
+  BeatSaw10,  // saw beat 1.0Hz
+  BeatSaw20,  // saw beat 2.0Hz
   AccX,
   AccY,
   AccZ,
@@ -24,9 +29,12 @@ enum class InputSource : unsigned char {
   GyroZ,
   LENGTH
 };
-String input_name(InputSource id) {
+String input_name(DataSource id) {
   static String names[] = {
-      "Time", "AccX", "AccY", "AccZ", "AccMAG", "GyroX", "GyroY", "GyroZ",
+      "Beat/Sine/0.5Hz", "Beat/Sine/1.0Hz", "Beat/Sine/2.0Hz", "Beat/Saw/0.5Hz",
+      "Beat/Saw/1.0Hz",  "Beat/Saw/2.0Hz",  "Acc/X",           "Acc/Y",
+      "Acc/Z",           "Acc/Mag",         "Gyro/X",          "Gyro/Y",
+      "Gyro/Z",
   };
   return names[static_cast<uint8_t>(id)];
 }
@@ -69,12 +77,14 @@ void reflectParams(led_strip::PixelManager &manager,
     manager.setWaveSpeed(pixel_srv.wave_speed_chr.valueLE());
   }
 
-  // input source
+  // data source
   if (!is_on_written | pixel_srv.input_chr.written()) {
     if (pixel_srv.input_chr.value() <
-        static_cast<uint8_t>(InputSource::LENGTH)) {
+        static_cast<uint8_t>(DataSource::LENGTH)) {
       pixel_srv.input_name_chr.writeValue(
-          input_name(static_cast<InputSource>(pixel_srv.input_chr.valueLE())));
+          input_name(static_cast<DataSource>(pixel_srv.input_chr.valueLE())));
+    } else {
+      /* out of index */
     }
   }
 
@@ -88,57 +98,88 @@ void setPixelColors(led_strip::PixelManager &manager,
   }
 }
 
-void updatePixelColors(led_strip::PixelManager &manager,
-                       InputSource input_src) {
-  // read sensor value
+float getSrcValue(DataSource input_src) {
   float sensor_value = 0.0f;
+  float t = (millis() / 1.0e3f);
   switch (input_src) {
-    case InputSource::Time:
-      sensor_value = millis() / 1.0e3f;
+    case DataSource::BeatSin05:
+      // 0.5 Hz
+      sensor_value = 0.5f * sinf(2.0f * M_PI * 0.5f * t) + 0.5f;
+      break;
+    case DataSource::BeatSin10:
+      // 1.0 Hz
+      sensor_value = 0.5 * sinf(2.0f * M_PI * 1.0f * t) + 0.5f;
+      break;
+    case DataSource::BeatSin20:
+      // 2.0 Hz
+      sensor_value = 0.5 * sinf(2.0f * M_PI * 2.0f * t) + 0.5f;
+      break;
+    case DataSource::BeatSaw05:
+      // 0.5 Hz
+      sensor_value = 0.5f * t - floorf(0.5f * t);
+      break;
+    case DataSource::BeatSaw10:
+      // 1.0 Hz
+      sensor_value = t - floorf(t);
+      break;
+    case DataSource::BeatSaw20:
+      // 0.5 Hz
+      sensor_value = 2.0f * t - floorf(2.0f * t);
       break;
     default:
       break;
   }
+  return sensor_value;
+}
+
+void updatePixelColors(led_strip::PixelManager &manager, DataSource input_src) {
+  // read sensor value
+  float sensor_value = getSrcValue(input_src);
   // compute intensity
   manager.computeAndSetIntensity(sensor_value);
   manager.setColor();
 }
 #ifdef LSM6DS3_ENABLED
-void updatePixelColors(led_strip::PixelManager &manager, LSM6DS3 &imu,
-                       InputSource input_src) {
-  // read sensor value
+float getSrcValue(DataSource input_src, LSM6DS3 &imu) {
   float sensor_value = 0.0f;
   switch (input_src) {
-    case InputSource::Time:
-      sensor_value = millis() / 1.0e3f;
-      break;
-    case InputSource::AccX:
+    case DataSource::AccX:
       sensor_value =
           easing::remap(imu.readFloatAccelX(), -2.0f, 2.0f, -1.0f, 1.0f);
       break;
-    case InputSource::AccY:
+    case DataSource::AccY:
       sensor_value =
           easing::remap(imu.readFloatAccelY(), -2.0f, 2.0f, -1.0f, 1.0f);
       break;
-    case InputSource::AccZ:
+    case DataSource::AccZ:
       sensor_value =
           easing::remap(imu.readFloatAccelZ(), -2.0f, 2.0f, -1.0f, 1.0f);
       break;
-    case InputSource::GyroX:
+    case DataSource::GyroX:
       sensor_value =
           easing::remap(imu.readFloatGyroX(), -180.0f, 180.0f, -1.0f, 1.0f);
       break;
-    case InputSource::GyroY:
+    case DataSource::GyroY:
       sensor_value =
           easing::remap(imu.readFloatGyroY(), -180.0f, 180.0f, -1.0f, 1.0f);
       break;
-    case InputSource::GyroZ:
+    case DataSource::GyroZ:
       sensor_value =
           easing::remap(imu.readFloatGyroZ(), -180.0f, 180.0f, -1.0f, 1.0f);
       break;
-    default:
-      break;
   }
+
+  return sensor_value;
+}
+void updatePixelColors(led_strip::PixelManager &manager, LSM6DS3 &imu,
+                       DataSource input_src) {
+  // read sensor value
+  float sensor_value = 0.0f;
+  sensor_value = getSrcValue(input_src);
+  if (sensor_value < 1e-6f) {
+    sensor_value = getSrcValue(input_src, imu);
+  }
+
   // compute intensity
   manager.computeAndSetIntensity(sensor_value);
   manager.setColor();
