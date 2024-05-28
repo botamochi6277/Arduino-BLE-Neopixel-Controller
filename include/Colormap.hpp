@@ -42,12 +42,18 @@ enum class ColormapId : unsigned char {
   Spectral,
   CoolWarm,
   Viridis,
+  // custom
+  Instagram,
+  Martini,
+  Megatoron,
   LENGTH
 };
 
 String colormap_name(ColormapId cmap_id) {
-  static String names[] = {"Hsv",    "Twilight", "TwilightS", "Cool",   "Hot",
-                           "Wistia", "Spectral", "CoolWarm",  "Viridis"};
+  static String names[] = {
+      "Hsv",      "Twilight", "TwilightS", "Cool",      "Hot",     "Wistia",
+      "Spectral", "CoolWarm", "Viridis",   "Instagram", "Martini", "Megatoron",
+  };
   return names[static_cast<uint8_t>(cmap_id)];
 }
 
@@ -224,6 +230,73 @@ void assignViridisColor(float &r, float &g, float &b, float intensity) {
   b = constrain(b, 0.0f, 1.0f);
 }
 
+void assignInstagramColor(float &r, float &g, float &b, float intensity) {
+  static const float coff_r[] = {0.5137255337955772f, 0.6674700178273065f,
+                                 2.3996448417985077f, -5.172947641644774f,
+                                 2.5803425940614506f};
+
+  static const float coff_g[] = {
+      0.22745090839887416f, 0.17150524455463953f, -3.387647901303438f,
+      7.371526042362648f,   -3.692638280364719f,
+  };
+
+  static const float coff_b[] = {0.7058822827005238, -0.7389287050284381,
+                                 -3.71413099481592, 8.02475544214574,
+                                 -4.006989867585645};
+
+  r = polyValue(intensity, coff_r, 5U);
+  g = polyValue(intensity, coff_g, 5U);
+  b = polyValue(intensity, coff_b, 5U);
+
+  r = constrain(r, 0.0f, 1.0f);
+  g = constrain(g, 0.0f, 1.0f);
+  b = constrain(b, 0.0f, 1.0f);
+}
+
+void assignMartiniColor(float &r, float &g, float &b, float intensity) {
+  static const float coff_r[] = {0.9921569538692818, -0.4881775295463269,
+                                 4.165519438685839, -9.081285726704252,
+                                 4.5529634118932};
+
+  static const float coff_g[] = {0.32941182332642055, 0.9267362737812725,
+                                 3.2396033218957334, -6.982076358102499,
+                                 3.4824034404853896};
+
+  static const float coff_b[] = {0.9137254353788334, -0.9027979042878135,
+                                 -3.045748296079152, 6.562330284608044,
+                                 -3.27260762489274};
+
+  r = polyValue(intensity, coff_r, 5U);
+  g = polyValue(intensity, coff_g, 5U);
+  b = polyValue(intensity, coff_b, 5U);
+
+  r = constrain(r, 0.0f, 1.0f);
+  g = constrain(g, 0.0f, 1.0f);
+  b = constrain(b, 0.0f, 1.0f);
+}
+
+void assignMegatoronColor(float &r, float &g, float &b, float intensity) {
+  static const float coff_r[] = {0.7764706086733416, 0.28194513294851825,
+                                 1.1109132084820332, -2.396480702488311,
+                                 1.1957792271087373};
+
+  static const float coff_g[] = {1.0000000253159125, -0.43104883148598716,
+                                 1.023943509616419, -2.251501496314707,
+                                 1.1331166135685438};
+
+  static const float coff_b[] = {0.8666666396540221, -0.49783398198512796,
+                                 -1.5247697527185393, 3.282418785996648,
+                                 -1.6362856459243542};
+
+  r = polyValue(intensity, coff_r, 5U);
+  g = polyValue(intensity, coff_g, 5U);
+  b = polyValue(intensity, coff_b, 5U);
+
+  r = constrain(r, 0.0f, 1.0f);
+  g = constrain(g, 0.0f, 1.0f);
+  b = constrain(b, 0.0f, 1.0f);
+}
+
 // utils
 
 void assignCyclicColor(float &r, float &g, float &b, float intensity,
@@ -275,7 +348,15 @@ void assignDivergingColor(float &r, float &g, float &b, float intensity,
     case ColormapId::Viridis:
       assignViridisColor(r, g, b, intensity);
       break;
-
+    case ColormapId::Instagram:
+      assignInstagramColor(r, g, b, intensity);
+      break;
+    case ColormapId::Martini:
+      assignMartiniColor(r, g, b, intensity);
+      break;
+    case ColormapId::Megatoron:
+      assignMegatoronColor(r, g, b, intensity);
+      break;
     default:
       break;
   }
@@ -298,6 +379,9 @@ void assignColor(float &r, float &g, float &b, float intensity, ColormapId cmap,
     case ColormapId::Spectral:
     case ColormapId::CoolWarm:
     case ColormapId::Viridis:
+    case ColormapId::Instagram:
+    case ColormapId::Martini:
+    case ColormapId::Megatoron:
       assignDivergingColor(r, g, b, intensity, cmap);
       break;
     default:

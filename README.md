@@ -6,6 +6,8 @@ Control NeoPixel-strip with [Seeeduino XIAO BLE](https://wiki.seeedstudio.com/XI
 
 You can change the lighting config with BLE. The lighting config has three parameters: `input_src_id`, `intensity_func_id`, and `colormap_id`.
 
+
+
 ```mermaid
 graph LR
 
@@ -23,21 +25,27 @@ sensor-->|value|intensity_func-->|intensity|colormap-->|color|pixel_manager-->ne
 
 ```
 
+```mermaid
+graph LR
 
-## Lightning Config
+data_src[data src]
+data_src-->|raw data|normalize-->|normalized value|mapping-->|intensity|colormap-->|rgb|pixel
+```
 
-### Inputs
-- Time
+## Lighting Config
+
+### Inputs (Sources)
+- Beat 0.5Hz/1.0Hz/2.0Hz (30bpm/60bpm/120bpm )
 - Accel X/Y/Z
 - Gyro X/Y/Z
 
-### Intensity Functions
+### Intensity Functions (Mapping functions converting sensor value to intensity)
 - Heat (Linear)
 - Wipe
 - Traveling Wave
 - etc.
 
-### ColorMaps
+### ColorMaps (functions converting intensity to color)
 - Hsv
 - Twilight
 - TwilightShifted
