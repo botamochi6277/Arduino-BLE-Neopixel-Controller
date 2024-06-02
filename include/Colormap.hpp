@@ -10,7 +10,7 @@ float polyValue(float x, const float coffs[], size_t coffs_length) {
         if (i == 0) {
             y += coffs[i];
         } else {
-            y += powf(x, i);
+            y += coffs[i] * powf(x, i);
         }
     }
     return y;
