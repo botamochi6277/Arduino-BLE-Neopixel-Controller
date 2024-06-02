@@ -25,11 +25,12 @@ sensor-->|value|intensity_func-->|intensity|colormap-->|color|pixel_manager-->ne
 
 ```
 
+processing flow:
 ```mermaid
 graph LR
 
 data_src[data src]
-data_src-->|raw data|normalize-->|normalized value|mapping-->|intensity|colormap-->|rgb|pixel
+data_src-->|raw data|normalize-->|"magnitude\n(normalized value)"|shape_func-->|intensity|colormap-->|rgb|pixel
 ```
 
 ## Lighting Config
@@ -39,7 +40,7 @@ data_src-->|raw data|normalize-->|normalized value|mapping-->|intensity|colormap
 - Accel X/Y/Z
 - Gyro X/Y/Z
 
-### Intensity Functions (Mapping functions converting sensor value to intensity)
+### Shape Functions (Mapping functions converting magnitude to intensity)
 - Heat (Linear)
 - Wipe
 - Traveling Wave
