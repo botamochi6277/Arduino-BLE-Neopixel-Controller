@@ -67,30 +67,31 @@ float getSrcValue(DataSource input_src) {
 #ifdef LSM6DS3_ENABLED
 float getSrcValue(DataSource input_src, LSM6DS3 &imu) {
     float magnitude = 0.0f;
+    static float max_acc = 1.0f;
     switch (input_src) {
         case DataSource::AccX:
-            magnitude =
-                easing::remap(imu.readFloatAccelX(), -2.0f, 2.0f, -1.0f, 1.0f);
+            magnitude = easing::remap(imu.readFloatAccelX(), -max_acc, max_acc,
+                                      -1.0f, 1.0f, true);
             break;
         case DataSource::AccY:
-            magnitude =
-                easing::remap(imu.readFloatAccelY(), -2.0f, 2.0f, -1.0f, 1.0f);
+            magnitude = easing::remap(imu.readFloatAccelY(), -max_acc, max_acc,
+                                      -1.0f, 1.0f, true);
             break;
         case DataSource::AccZ:
-            magnitude =
-                easing::remap(imu.readFloatAccelZ(), -2.0f, 2.0f, -1.0f, 1.0f);
+            magnitude = easing::remap(imu.readFloatAccelZ(), -max_acc, max_acc,
+                                      -1.0f, 1.0f, true);
             break;
         case DataSource::GyroX:
             magnitude = easing::remap(imu.readFloatGyroX(), -180.0f, 180.0f,
-                                      -1.0f, 1.0f);
+                                      -1.0f, 1.0f, true);
             break;
         case DataSource::GyroY:
             magnitude = easing::remap(imu.readFloatGyroY(), -180.0f, 180.0f,
-                                      -1.0f, 1.0f);
+                                      -1.0f, 1.0f, true);
             break;
         case DataSource::GyroZ:
             magnitude = easing::remap(imu.readFloatGyroZ(), -180.0f, 180.0f,
-                                      -1.0f, 1.0f);
+                                      -1.0f, 1.0f, true);
             break;
     }
 

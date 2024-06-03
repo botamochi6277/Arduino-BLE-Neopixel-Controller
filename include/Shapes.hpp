@@ -33,7 +33,7 @@ void heat(float intensity[], uint16_t num_pixels, float magnitude) {
 void wipeQuad(float intensity[], uint16_t num_pixels, float magnitude,
               float blur_width = 0.25f, bool is_reversed = false) {
     // 1.0f or -1.0f
-    auto d = abs(magnitude) > 1.0e-3f ? abs(magnitude) / magnitude : 1.0f;
+    auto sign = abs(magnitude) > 1.0e-3f ? magnitude / abs(magnitude) : 1.0f;
     // blur_width 0--1.0 relative length to pixels length
     auto a = easing::remap((1.0f - abs(magnitude)), 0.0f, 1.0f,
                            -1.0f * blur_width, 1.0f);
@@ -44,16 +44,17 @@ void wipeQuad(float intensity[], uint16_t num_pixels, float magnitude,
             x = 1.0f - x;
         }
 
-        intensity[index] = d * easing::quadInOut(x - a, blur_width);
+        intensity[index] = sign * easing::quadInOut(x - a, blur_width);
     }
 }
 
 void pulseQuad(float intensity[], uint16_t num_pixels, float magnitude,
                float pulse_width = 0.25f, bool is_reversed = false) {
-    auto d = abs(magnitude) > 1.0e-3f ? abs(magnitude) / magnitude : 1.0f;
+    auto sign = abs(magnitude) > 1.0e-3f ? magnitude / abs(magnitude) : 1.0f;
     // pulse_width 0--1.0 relative length to pixels length
-    auto a = easing::remap((1.0f - abs(magnitude)), 0.0f, 1.0f,
-                           -1.0f * pulse_width, 1.0f + pulse_width);
+    auto a =
+        easing::remap((1.0f - abs(magnitude)), 0.0f, 1.0f,
+                      -1.0f * 0.5f * pulse_width, 1.0f + 0.5f * pulse_width);
 
     for (uint16_t index = 0; index < num_pixels; index++) {
         auto x = static_cast<float>(index) / num_pixels;
@@ -61,8 +62,9 @@ void pulseQuad(float intensity[], uint16_t num_pixels, float magnitude,
             x = 1.0f - x;
         }
         intensity[index] =
-            d * (easing::quadInOut(x + pulse_width - a, pulse_width) -
-                 easing::quadInOut(x - pulse_width - a, pulse_width));
+            sign *
+            (easing::quadInOut(x + 0.5f * pulse_width - a, 0.5f * pulse_width) -
+             easing::quadInOut(x - 0.5f * pulse_width - a, 0.5f * pulse_width));
     }
 }
 

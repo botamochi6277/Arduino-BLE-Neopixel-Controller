@@ -21,7 +21,6 @@
 #include "ColorUtils.hpp"
 #include "Colormap.hpp"
 #include "DataSource.hpp"
-#include "LedStrip.hpp"
 #include "MyTasks.hpp"
 #include "MyUtils.hpp"
 #include "NeopixelService.hpp"
@@ -98,7 +97,7 @@ void setup() {
     BLE.setDeviceName(local_name.c_str());
     BLE.setLocalName("NeoPixels");
     BLE.setAdvertisedService(pixel_srv);
-    pixel_srv.init(20U,
+    pixel_srv.init(20U, NUM_PIXELS,
                    static_cast<uint8_t>(data_source::DataSource::BeatSin05),
                    static_cast<uint8_t>(shape::IntensityFuncId::SawWave),
                    static_cast<uint8_t>(colormap::ColormapId::Hsv));
@@ -168,7 +167,9 @@ void setup() {
                  // update intensity
                  shape::setIntensity(intensity, NUM_PIXELS, magnitude,
                                      static_cast<shape::IntensityFuncId>(
-                                         pixel_srv.intensity_func_chr.value()));
+                                         pixel_srv.intensity_func_chr.value()),
+                                     pixel_srv.wave_width_chr.valueLE(),
+                                     pixel_srv.wave_speed_chr.valueLE() < 0.0f);
                  // set color cache
                  for (size_t i = 0; i < NUM_PIXELS; i++) {
                      color_caches[i].setCmapColor(
