@@ -32,8 +32,11 @@ void heat(float intensity[], uint16_t num_pixels, float magnitude) {
 
 void wipeQuad(float intensity[], uint16_t num_pixels, float magnitude,
               float blur_width = 0.25f, bool is_reversed = false) {
-    // 1.0f or -1.0f
-    auto sign = abs(magnitude) > 1.0e-3f ? magnitude / abs(magnitude) : 1.0f;
+    auto sign = 1.0f;
+    if (magnitude < 0.0f) {
+        sign = -1.0f;
+    }
+
     // blur_width 0--1.0 relative length to pixels length
     auto a = easing::remap((1.0f - abs(magnitude)), 0.0f, 1.0f,
                            -1.0f * blur_width, 1.0f);
@@ -50,7 +53,10 @@ void wipeQuad(float intensity[], uint16_t num_pixels, float magnitude,
 
 void pulseQuad(float intensity[], uint16_t num_pixels, float magnitude,
                float pulse_width = 0.25f, bool is_reversed = false) {
-    auto sign = abs(magnitude) > 1.0e-3f ? magnitude / abs(magnitude) : 1.0f;
+    auto sign = 1.0f;
+    if (magnitude < 0.0f) {
+        sign = -1.0f;
+    }
     // pulse_width 0--1.0 relative length to pixels length
     auto a =
         easing::remap((1.0f - abs(magnitude)), 0.0f, 1.0f,

@@ -51,7 +51,7 @@ float trianglePulse(float x, float duration = 1.0f, float scale = 1.0f) {
 }
 
 float quadInOut(float x, float duration = 1.0f) {
-    static float xx = x / (duration + 1e-9f);
+    float xx = x / (duration + 1e-9f);
     if (x < 0.0f) {
         return 0.0f;
     } else if (x < 0.5f * duration) {
