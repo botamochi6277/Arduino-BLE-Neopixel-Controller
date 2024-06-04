@@ -42,9 +42,6 @@ ble::NeoPixelService pixel_srv;
 
 unsigned long milli_sec;
 float clock_sec;
-float transition_start_sec;
-float transition_duration = 3.0f;
-float transition_progress = 0.0f;
 unsigned int loop_count = 0;
 
 bool transition_completed = false;  // flag for color transition
@@ -58,6 +55,8 @@ Adafruit_NeoPixel pixels(NUM_PIXELS, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 #ifdef LSM6DS3_ENABLED
 // Create a instance of class LSM6DS3
 LSM6DS3 my_imu(I2C_MODE, 0x6A);  // I2C device address 0x6A
+float last_knock_time = 0.0f;
+float min_knock_interval = 1.0f;
 #endif
 
 void setup() {
@@ -132,6 +131,7 @@ void setup() {
              [] {
                  BLE.poll();
                  tasks::reflectParams(pixel_srv, pixels);
+                 pixel_srv.wave_freq_chr.writeValueLE(magnitude);
 #ifdef SEEED_XIAO_NRF52840_SENSE
                  digitalWrite(LEDB, !digitalRead(LEDB));
 #endif
@@ -145,7 +145,7 @@ void setup() {
                  clock_sec = milli_sec * 1.0e-3f;
                  pixel_srv.timer_chr.writeValue(milli_sec);
              })
-        ->startFps(10);
+        ->startFps(60);
 
 #ifdef SEEED_XIAO_NRF52840_SENSE
     Tasks.add("Heart_beats", [] { digitalWrite(LEDG, !digitalRead(LEDG)); })
@@ -186,6 +186,23 @@ void setup() {
                  pixels.show();
              })
         ->startFps(24.0);
+
+#ifdef LSM6DS3_ENABLED
+    Tasks
+        .add("DetectKnock",
+             [] {
+                 if (clock_sec - last_knock_time < min_knock_interval) {
+                     return;
+                 }
+                 auto knock = tasks::detectKnock(my_imu, 1.5f);
+                 if (knock == tasks::Knock::Undetected) {
+                     return;
+                 }
+                 tasks::shiftChrValue(pixel_srv, knock);
+                 last_knock_time = clock_sec;
+             })
+        ->startFps(30.0);
+#endif
 
 }  // end of setup
 
