@@ -96,7 +96,7 @@ void setup() {
     BLE.setDeviceName(local_name.c_str());
     BLE.setLocalName("NeoPixels");
     BLE.setAdvertisedService(pixel_srv);
-    pixel_srv.init(20U, NUM_PIXELS,
+    pixel_srv.init(50U, NUM_PIXELS,
                    static_cast<uint8_t>(data_source::DataSource::BeatSin05),
                    static_cast<uint8_t>(shape::IntensityFuncId::SawWave),
                    static_cast<uint8_t>(colormap::ColormapId::Hsv));
@@ -131,7 +131,7 @@ void setup() {
              [] {
                  BLE.poll();
                  tasks::reflectParams(pixel_srv, pixels);
-                 pixel_srv.wave_freq_chr.writeValueLE(magnitude);
+                 pixel_srv.magnitude_chr.writeValueLE(magnitude);
 #ifdef SEEED_XIAO_NRF52840_SENSE
                  digitalWrite(LEDB, !digitalRead(LEDB));
 #endif
@@ -191,10 +191,14 @@ void setup() {
     Tasks
         .add("DetectKnock",
              [] {
+                 if (pixel_srv.knock_activate_chr.value() < 1) {
+                     return;
+                 }
+
                  if (clock_sec - last_knock_time < min_knock_interval) {
                      return;
                  }
-                 auto knock = tasks::detectKnock(my_imu, 1.5f);
+                 auto knock = tasks::detectKnock(my_imu, 1.8f);
                  if (knock == tasks::Knock::Undetected) {
                      return;
                  }
