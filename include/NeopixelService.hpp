@@ -230,14 +230,14 @@ NeoPixelService::NeoPixelService()
     this->colormap_name_chr.addDescriptor(str_colormap_format);
 }
 
-NeoPixelService::~NeoPixelService(){};
+NeoPixelService::~NeoPixelService() {};
 
 void NeoPixelService::init(uint8_t brightness, uint8_t num_pixels,
                            uint8_t sensor_id, uint8_t intensity_id,
                            uint8_t cmap) {
     this->brightness_chr.writeValue(brightness);
     this->num_pixels_chr.writeValue(num_pixels);
-    this->knock_activate_chr.writeValue(true);
+    this->knock_activate_chr.writeValue(false);
 
     this->input_chr.writeValue(sensor_id);
     this->intensity_func_chr.writeValue(intensity_id);
