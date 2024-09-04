@@ -1,120 +1,58 @@
-# XIAO BLE Neopixel Controller
+# Arduino BLE NeoPixel Controller
 
 [![PlatformIO Build](https://github.com/botamochi6277/XIAO-BLE-Neopixel-Controller/actions/workflows/ci-platformio.yml/badge.svg)](https://github.com/botamochi6277/XIAO-BLE-Neopixel-Controller/actions/workflows/ci-platformio.yml)
 
-Control Neopixel-strip with [Seeeduino XIAO BLE](https://wiki.seeedstudio.com/XIAO_BLE/)
+Control NeoPixel-strip with [Seeeduino XIAO BLE](https://wiki.seeedstudio.com/XIAO_BLE/)/[M5Stack Atom Lite](https://docs.m5stack.com/en/core/atom_lite)
 
-You can change the lighting colors of the pixels with BLE.
+You can change the lighting config with BLE. The lighting config has three parameters: `input_src_id`, `intensity_func_id`, and `colormap_id`.
 
 ```mermaid
 graph LR
 
 subgraph BLE Service
-  color01
-  color02
-  color03
-  color04
-
-  blend_type
-  noise
+  input_src_id
+  intensity_func_id
+  colormap_id
 end
 
-blend1((+))
+input_src_id-.->|select|sensor
+colormap_id-.->|select|colormap
+intensity_func_id-.->|select|intensity_func
 
-color01-->blend1
-color02-->blend1
-blend_type-->blend1
-
-blend1-->c1([static pixel colors])
-
-blend2((+))
-
-c1-->blend2
-noise-->blend2
-
-blend2-->c2([dynamic pixel colors])
-c2-->neopixels
+sensor-->|value|intensity_func-->|intensity|colormap-->|color|pixel_manager-->neopixels
 
 ```
 
-## Service Profile
+processing flow:
 
-```yml
----
-name: "NeopixelService"
-uuid: "19B10000-E8F2-537E-4F6C-D104768A1214"
-characteristics:
-  - name: "timer_chr"
-    uuid: "19B10001-E8F2-537E-4F6C-D104768A1214"
-    data_type: "UnsignedLong"
-    properties:
-      - "Read"
-      - "Notify"
-  - name: "imu_available_chr"
-    uuid: "19B10002-E8F2-537E-4F6C-D104768A1214"
-    data_type: "UnsignedChar"
-    properties:
-      - "Read"
-  - name: "num_pixels_chr"
-    uuid: "19B10011-E8F2-537E-4F6C-D104768A1214"
-    data_type: "UnsignedChar"
-    properties:
-      - "Read"
-  - name: "brightness_chr"
-    uuid: "19B10012-E8F2-537E-4F6C-D104768A1214"
-    data_type: "UnsignedChar"
-    properties:
-      - "Read"
-      - "Write"
-  - name: "num_colors_chr"
-    uuid: "19B10021-E8F2-537E-4F6C-D104768A1214"
-    data_type: "UnsignedChar"
-    properties:
-      - "Read"
-      - "Write"
-  - name: "color01_chr"
-    uuid: "19B10022-E8F2-537E-4F6C-D104768A1214"
-    data_type: "UnsignedInt"
-    properties:
-      - "Read"
-      - "Write"
-  - name: "color02_chr"
-    uuid: "19B10023-E8F2-537E-4F6C-D104768A1214"
-    data_type: "UnsignedInt"
-    properties:
-      - "Read"
-      - "Write"
-  - name: "color03_chr"
-    uuid: "19B10024-E8F2-537E-4F6C-D104768A1214"
-    data_type: "UnsignedInt"
-    properties:
-      - "Read"
-      - "Write"
-  - name: "color04_chr"
-    uuid: "19B10025-E8F2-537E-4F6C-D104768A1214"
-    data_type: "UnsignedInt"
-    properties:
-      - "Read"
-      - "Write"
-  - name: "blending_chr"
-    uuid: "19B10026-E8F2-537E-4F6C-D104768A1214"
-    data_type: "UnsignedChar"
-    properties:
-      - "Read"
-      - "Write"
-  - name: "fluctuation_chr"
-    uuid: "19B10028-E8F2-537E-4F6C-D104768A1214"
-    data_type: "UnsignedChar"
-    properties:
-      - "Read"
-      - "Write"
-  - name: "transition_chr"
-    uuid: "19B10027-E8F2-537E-4F6C-D104768A1214"
-    data_type: "UnsignedChar"
-    properties:
-      - "Read"
-      - "Write"
+```mermaid
+graph LR
+
+data_src[data src]
+data_src-->|raw data|normalize-->|"magnitude\n(normalized value)"|shape_func-->|intensity|colormap-->|rgb|pixel
 ```
+
+## Lighting Config
+
+### Inputs (Sources)
+
+- Beat 0.5Hz/1.0Hz/2.0Hz (30bpm/60bpm/120bpm )
+- Accel X/Y/Z
+- Gyro X/Y/Z
+
+### Shape Functions (Mapping functions converting magnitude to intensity)
+
+- Heat (Linear)
+- Wipe
+- Traveling Wave
+- etc.
+
+### ColorMaps (functions converting intensity to color)
+
+- Hsv
+- Twilight
+- TwilightShifted
+- etc.
 
 ## Add XIAO BLE to PlatformIO
 

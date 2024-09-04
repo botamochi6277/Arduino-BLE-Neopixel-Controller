@@ -3,9 +3,11 @@
 #define COLOR_UTILS_HPP
 
 // #include <Easing.h>
+#include <Arduino.h>
 #include <math.h>
 
-#include "easing.hpp"
+#include "Colormap.hpp"
+#include "Easing.hpp"
 namespace color {
 
 void hexToRgbw(uint32_t color, uint8_t &r, uint8_t &g, uint8_t &b, uint8_t &w) {

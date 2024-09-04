@@ -3,17 +3,27 @@
 
 // #include "FastLED.h" // FastLED unsupports nrf52 series
 //  https://github.com/adafruit/Adafruit_NeoPixel
+
+#ifdef SEEED_XIAO_NRF52840_SENSE
+#define LSM6DS3_ENABLED
+#endif
+
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 #include <ArduinoBLE.h>
-#ifdef SEEED_XIAO_NRF52840_SENSE
+#ifdef LSM6DS3_ENABLED
 #include "LSM6DS3.h"  // IMU chip
 #endif
-#include "Wire.h"
-#include "color_utils.hpp"
-#include "neopixel_service.hpp"
-#include "preset.hpp"
-#include "strip.hpp"
+#include <TaskManager.h>
+#include <Wire.h>
+
+#include "BLEPresets.hpp"
+#include "ColorUtils.hpp"
+#include "Colormap.hpp"
+#include "DataSource.hpp"
+#include "MyTasks.hpp"
+#include "MyUtils.hpp"
+#include "NeopixelService.hpp"
 
 // NeoPixel variables
 #ifdef ARDUINO_M5Stack_ATOM
@@ -28,280 +38,183 @@
 
 char message[128];  // buffer for sprintf
 
-ble::NeopixelService pixel_srv;
+ble::NeoPixelService pixel_srv;
 
 unsigned long milli_sec;
 float clock_sec;
-float transition_start_sec;
-float transition_duration = 3.0f;
-float transition_progress = 0.0f;
 unsigned int loop_count = 0;
 
 bool transition_completed = false;  // flag for color transition
 bool backward;
 
-uint32_t current_colors[NUM_PIXELS];
-
-uint32_t start_colors[NUM_PIXELS];
-uint32_t transited_colors[NUM_PIXELS];
-uint32_t cache_colors[NUM_PIXELS];
-
-uint32_t palette[4];
-float transition_weights[NUM_PIXELS];
-
-// FLUCTUATION_TIME
-uint32_t fluctuation_colors[NUM_PIXELS];
-
-uint8_t red_buff;
-uint8_t green_buff;
-uint8_t blue_buff;
-uint32_t color_buff;
-
+float magnitude = 0.0f;
+float intensity[NUM_PIXELS];
+color::PixelUnit color_caches[NUM_PIXELS];  // color cache
 Adafruit_NeoPixel pixels(NUM_PIXELS, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
-#ifdef SEEED_XIAO_NRF52840_SENSE
+#ifdef LSM6DS3_ENABLED
 // Create a instance of class LSM6DS3
 LSM6DS3 my_imu(I2C_MODE, 0x6A);  // I2C device address 0x6A
+float last_knock_time = 0.0f;
+float min_knock_interval = 1.0f;
 #endif
 
 void setup() {
-  // build-in leds
-#ifdef SEEED_XIAO_NRF52840_SENSE
-  pinMode(LEDR, OUTPUT);
-  pinMode(LEDG, OUTPUT);
-  pinMode(LEDB, OUTPUT);
-  // turn off the all build-in leds
-  digitalWrite(LEDR, HIGH);
-  digitalWrite(LEDG, HIGH);
-  digitalWrite(LEDB, HIGH);
+#ifdef LSM6DS3_ENABLED
+    init_leds(LEDR, LEDG, LEDB);
 #endif
-  pinMode(PIXEL_PIN, OUTPUT);
+    pinMode(PIXEL_PIN, OUTPUT);
 
-  Serial.begin(115200);
+    Serial.begin(115200);
 
-  for (size_t i = 0; i < 10; i++) {
-    if (Serial) {
-      break;
+    for (size_t i = 0; i < 100; i++) {
+        if (Serial) {
+            break;
+        }
+        delay(10);
     }
-    delay(100);
-  }
 
-  Serial.println("NeoPixel BLE waking");
+    Serial.println("NeoPixel BLE waking");
 
-  // custom services and characteristics can be added as well
-  // begin initialization
-  if (!BLE.begin()) {
-    Serial.println("starting BLE failed!");
-    while (1) {
+    // custom services and characteristics can be added as well
+    // begin initialization
+    if (!BLE.begin()) {
+        Serial.println("starting BLE failed!");
+        while (1) {
 #ifdef SEEED_XIAO_NRF52840_SENSE
-      digitalWrite(LEDR, !digitalRead(LEDR));
+            digitalWrite(LEDR, !digitalRead(LEDR));
 #endif
-      delay(100);
+            delay(100);
+        }
     }
-  }
 
-  Serial.print("Peripheral address: ");
-  String ble_address = BLE.address();
-  Serial.println(ble_address);
-  String local_name = "NeoPixels_" + ble_address;
-  // set advertised local name and service UUID:
-  BLE.setDeviceName(local_name.c_str());
-  BLE.setLocalName("NeoPixels");
-  BLE.setAdvertisedService(pixel_srv);
+    Serial.print("Peripheral address: ");
+    String ble_address = BLE.address();
+    Serial.println(ble_address);
+    String local_name = "NeoPixels_" + ble_address;
+    // set advertised local name and service UUID:
+    BLE.setDeviceName(local_name.c_str());
+    BLE.setLocalName("NeoPixels");
+    BLE.setAdvertisedService(pixel_srv);
+    pixel_srv.init(50U, NUM_PIXELS,
+                   static_cast<uint8_t>(data_source::DataSource::BeatSin05),
+                   static_cast<uint8_t>(shape::IntensityFuncId::SawWave),
+                   static_cast<uint8_t>(colormap::ColormapId::Hsv));
+    tasks::reflectParams(pixel_srv, pixels, false);  // reflect initial values
 
-  // add service
-  BLE.addService(pixel_srv);
+    // add service
+    BLE.addService(pixel_srv);
 
-  // start advertising
-  BLE.advertise();
+    // start advertising
+    BLE.advertise();
 
-#ifdef SEEED_XIAO_NRF52840_SENSE
-  if (my_imu.begin() != 0) {
-    Serial.println("IMU error");
-    pixel_srv.imu_available_chr.writeValue(0);
-  } else {
-    pixel_srv.imu_available_chr.writeValue(1);
-  }
+#ifdef LSM6DS3_ENABLED
+    if (my_imu.begin() != 0) {
+        Serial.println("IMU error");
+        pixel_srv.imu_available_chr.writeValue(0);
+    } else {
+        pixel_srv.imu_available_chr.writeValue(1);
+    }
 #endif
 
-  // set the initial value for the characteristic:
-  pixel_srv.brightness_chr.writeValue(20);
-  pixel_srv.num_pixels_chr.writeValue(NUM_PIXELS);
-  pixel_srv.num_colors_chr.writeValue(2U);
-  pixel_srv.transition_chr.writeValue(TRANSITION_DISSOLVE);
-  pixel_srv.color01_chr.writeValue(color::hsbToHsbhex(0x00, 0xff, 0xff));
-  pixel_srv.color02_chr.writeValue(color::hsbToHsbhex(0xffff, 255U, 255U));
-  pixel_srv.color04_chr.writeValue(color::hsbToHsbhex(0xffff, 255U, 255U));
+    // set the initial value for the characteristic:
 
-  digitalWrite(PIXEL_PIN, LOW);
-  pixels.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
-  pixels.setBrightness(20);
-  pixels.show();  // Turn OFF all pixels
+    digitalWrite(PIXEL_PIN, LOW);
+    pixels.begin();  // INITIALIZE NeoPixel strip object (REQUIRED)
+    pixels.setBrightness(pixel_srv.brightness_chr.value());
+    pixels.show();  // Turn OFF all pixels
 
-  // init color buffer
-  for (size_t i = 0; i < NUM_PIXELS; i++) {
-    current_colors[i] = color::hsbToHsbhex(0xff00, 0xff, 0x00);
-  }
-  palette[0] = pixel_srv.color01_chr.value();
-  palette[1] = pixel_srv.color02_chr.value();
-  palette[2] = pixel_srv.color03_chr.value();
-  palette[3] = pixel_srv.color04_chr.value();
+    loop_count = 0;
+    // register tasks
+    Tasks
+        .add("BLE_polling",
+             [] {
+                 BLE.poll();
+                 tasks::reflectParams(pixel_srv, pixels);
+                 pixel_srv.magnitude_chr.writeValueLE(magnitude);
+#ifdef SEEED_XIAO_NRF52840_SENSE
+                 digitalWrite(LEDB, !digitalRead(LEDB));
+#endif
+             })
+        ->startFps(10);
+    // clock publishing task
+    Tasks
+        .add("Clock",
+             [] {
+                 milli_sec = millis();
+                 clock_sec = milli_sec * 1.0e-3f;
+                 pixel_srv.timer_chr.writeValue(milli_sec);
+             })
+        ->startFps(60);
 
-  // temporal
-  for (size_t i = 0; i < NUM_PIXELS; i++) {
-    fluctuation_colors[i] = palette[3];
-  }
+#ifdef SEEED_XIAO_NRF52840_SENSE
+    Tasks.add("Heart_beats", [] { digitalWrite(LEDG, !digitalRead(LEDG)); })
+        ->startFps(1.0);
+#endif
 
-  loop_count = 0;
-}
+    Tasks
+        .add("UpdateColorCache",
+             [] {
+                 // update magnitude
+                 auto src_label = static_cast<data_source::DataSource>(
+                     pixel_srv.input_chr.value());
+                 magnitude = data_source::getSrcValue(src_label);
+#ifdef LSM6DS3_ENABLED
+                 if (magnitude < 1e-6f) {
+                     magnitude = data_source::getSrcValue(src_label, my_imu);
+                 }
+#endif
+                 // update intensity
+                 shape::setIntensity(intensity, NUM_PIXELS, magnitude,
+                                     static_cast<shape::IntensityFuncId>(
+                                         pixel_srv.intensity_func_chr.value()),
+                                     pixel_srv.wave_width_chr.valueLE(),
+                                     pixel_srv.wave_speed_chr.valueLE() < 0.0f);
+                 // set color cache
+                 for (size_t i = 0; i < NUM_PIXELS; i++) {
+                     color_caches[i].setCmapColor(
+                         intensity[i], static_cast<colormap::ColormapId>(
+                                           pixel_srv.colormap_chr.value()));
+                 }
+             })
+        ->startFps(24.0);
+
+    Tasks
+        .add("UpdatePixelColors",
+             [] {
+                 tasks::setPixelColors(color_caches, pixels);
+                 pixels.show();
+             })
+        ->startFps(24.0);
+
+#ifdef LSM6DS3_ENABLED
+    Tasks
+        .add("DetectKnock",
+             [] {
+                 if (pixel_srv.knock_activate_chr.value() < 1) {
+                     return;
+                 }
+
+                 if (clock_sec - last_knock_time < min_knock_interval) {
+                     return;
+                 }
+                 auto knock = tasks::detectKnock(my_imu, 1.8f);
+                 if (knock == tasks::Knock::Undetected) {
+                     return;
+                 }
+                 tasks::shiftChrValue(pixel_srv, knock);
+                 last_knock_time = clock_sec;
+             })
+        ->startFps(30.0);
+#endif
+
+}  // end of setup
 
 void loop() {
-  milli_sec = millis();
-  clock_sec = milli_sec * 1.0e-3f;
-  pixel_srv.timer_chr.writeValue(milli_sec);
-
-#ifdef SEEED_XIAO_NRF52840_SENSE
-  digitalWrite(LEDG, !digitalRead(LEDG));  // heartbeats
-#endif
-  BLE.poll();
-  if (pixel_srv.brightness_chr.written()) {
-    pixels.setBrightness(pixel_srv.brightness_chr.value());
-  }
-  // color parameter was changed, updating static colors
-  if (pixel_srv.color01_chr.written() || pixel_srv.color02_chr.written() ||
-      pixel_srv.color03_chr.written() || pixel_srv.color04_chr.written() ||
-      pixel_srv.blending_chr.written() || pixel_srv.num_colors_chr.written() ||
-      loop_count == 0) {
-// re-blend static color
-#ifdef SEEED_XIAO_NRF52840_SENSE
-    digitalWrite(LEDB, !digitalRead(LEDB));  // response for ble value changing
-#endif
-
-    Serial.print("BLE params were updated, transition ");
-    Serial.println(pixel_srv.transition_chr.value());
-
-    transition_start_sec = clock_sec;
-    // assign palette
-    palette[0] = pixel_srv.color01_chr.value();
-    palette[1] = pixel_srv.color02_chr.value();
-    palette[2] = pixel_srv.color03_chr.value();
-    palette[3] = pixel_srv.color04_chr.value();
-
-    led_strip::blend(transited_colors, palette, NUM_PIXELS,
-                     pixel_srv.num_colors_chr.value(),
-                     pixel_srv.blending_chr.value());
-    sprintf(message, "transition target color: $%08x--$%08x",
-            transited_colors[0], transited_colors[NUM_PIXELS - 1]);
-    Serial.println(message);
-
-    transition_completed = false;
-
-    for (size_t i = 0; i < NUM_PIXELS; i++) {
-      fluctuation_colors[i] = palette[3];
-    }
-
-    for (size_t i = 0; i < NUM_PIXELS; i++) {
-      start_colors[i] = current_colors[i];
-    }
-  }
-
-  transition_progress =
-      (clock_sec - transition_start_sec) / transition_duration;
-
-  if (transition_completed == false) {
-    switch (pixel_srv.transition_chr.value()) {
-      case TRANSITION_DISSOLVE:
-        transition_completed = led_strip::dissolveEasing(
-            current_colors, start_colors, transited_colors, transition_weights,
-            NUM_PIXELS, transition_progress);
-        break;
-      case TRANSITION_WIPE:
-        transition_completed = led_strip::wipeEasing(
-            current_colors, start_colors, transited_colors, transition_weights,
-            NUM_PIXELS, transition_progress, false);
-        break;
-      case TRANSITION_SLIDE:
-        transition_completed = led_strip::slideEasing(
-            current_colors, start_colors, transited_colors, transition_weights,
-            NUM_PIXELS, transition_progress, false);
-        break;
-      default:
-        break;
-    }
-    if (transition_completed) {
-      sprintf(message, "transition was over: %0.2f", transition_progress);
-      Serial.println(message);
-      sprintf(message, "final color: $%08x--$%08x", current_colors[0],
-              current_colors[NUM_PIXELS - 1]);
-      Serial.println(message);
-
-      for (size_t i = 0; i < NUM_PIXELS; i++) {
-        start_colors[i] = current_colors[i];
-      }
-      // led_strip::blend(fluctuation_colors, palette, NUM_PIXELS,
-      //                  pixel_srv.num_colors_chr.value(),
-      //                  pixel_srv.blending_chr.value());
-    }
-
-    // for (uint16_t i = 0; i < pixels.numPixels(); i++) {
-    //   pixels.setPixelColor(i, color::hsbhexTohex(current_colors[i]));
-    // }
-    // pixels.show();
-  }
-
-  if (transition_completed) {
-    // transition was completed
-    // add fluctuation
-    float p;  // cache, 0--1.0
-    uint8_t color_idx;
-    switch (pixel_srv.fluctuation_chr.value()) {
-      case FLUCTUATION_TIME:
-        p = 0.5f + 0.5f * std::sin(2.0f * M_PI * 0.1f * clock_sec);
-        led_strip::dissolveEasing(current_colors, transited_colors,
-                                  fluctuation_colors, transition_weights,
-                                  NUM_PIXELS, p);
-        break;
-      case FLUCTUATION_PERIODIC:
-#ifdef SEEED_XIAO_NRF52840_SENSE
-        // hsb
-        color_idx =
-            easing::argmax3(my_imu.readFloatAccelX(), my_imu.readFloatAccelY(),
-                            my_imu.readFloatAccelZ());
-        if (color_idx == 0) {
-          // x dominant
-          color_buff = color::hsbToHsbhex(0x00, 0xff, 0xff);
-          p = easing::remap(abs(my_imu.readFloatAccelX()), 0.0f, 1.5f, 0.0f,
-                            1.0f, true);
-        }
-        if (color_idx == 1) {
-          // y dominant
-          color_buff = color::hsbToHsbhex(64U, 0xff, 0xff);
-          p = easing::remap(abs(my_imu.readFloatAccelY()), 0.0f, 1.5f, 0.0f,
-                            1.0f, true);
-        }
-
-        if (color_idx == 2) {
-          // z dominant
-          color_buff = color::hsbToHsbhex(128U, 0xff, 0xff);
-          p = easing::remap(abs(my_imu.readFloatAccelZ()), 0.0f, 1.5f, 0.0f,
-                            1.0f, true);
-        }
-        led_strip::fill(fluctuation_colors, NUM_PIXELS, color_buff);
-        led_strip::dissolveEasing(current_colors, transited_colors,
-                                  fluctuation_colors, transition_weights,
-                                  NUM_PIXELS, p);
-#endif
-        break;
-      default:
-        // 0 is off
-        break;
-    }
-  }
-
-  for (uint16_t i = 0; i < pixels.numPixels(); i++) {
-    pixels.setPixelColor(i, color::hsbhexTohex(current_colors[i]));
-  }
-  pixels.show();
-  delay(DELAY_LED);
-  loop_count++;
+    milli_sec = millis();
+    clock_sec = milli_sec * 1.0e-3f;
+    pixel_srv.timer_chr.writeValue(milli_sec);
+    Tasks.update();  // automatically execute tasks
+    delay(1);
+    loop_count++;
 }
