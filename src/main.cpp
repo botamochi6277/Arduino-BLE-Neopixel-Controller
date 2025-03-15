@@ -31,6 +31,7 @@
 #else
 #define PIXEL_PIN 7  // MOSI
 #endif
+#define REED_PIN 1
 #define NUM_PIXELS 45
 #define DELAY_MS 500
 
@@ -64,6 +65,9 @@ void setup() {
     init_leds(LEDR, LEDG, LEDB);
 #endif
     pinMode(PIXEL_PIN, OUTPUT);
+
+    // reed switch
+    pinMode(REED_PIN, INPUT_PULLUP);
 
     Serial.begin(115200);
 
@@ -181,8 +185,15 @@ void setup() {
     Tasks
         .add("UpdatePixelColors",
              [] {
-                 tasks::setPixelColors(color_caches, pixels);
-                 pixels.show();
+                 if (digitalRead(REED_PIN) == LOW) {
+                     // reed switch is on
+                     // turn off all pixels
+                     pixels.fill(pixels.Color(0, 0, 0), 0, NUM_PIXELS);
+                     pixels.show();
+                 } else {
+                     tasks::setPixelColors(color_caches, pixels);
+                     pixels.show();
+                 }
              })
         ->startFps(24.0);
 
