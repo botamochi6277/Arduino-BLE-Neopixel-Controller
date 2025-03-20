@@ -8,14 +8,14 @@ namespace shape {
 
 // intensity function ID
 enum class IntensityFuncId : unsigned char {
-    Heat,
-    Wipe,
-    Pulse,
+    kHeat,
+    kWipe,
+    kPulse,
     // TravelingWave,
     // TravelingPulse,
     // StationaryWave,
-    SineWave,
-    SawWave,
+    kSineWave,
+    kSawWave,
     LENGTH
 };
 
@@ -24,104 +24,78 @@ String intensity_func_name(IntensityFuncId id) {
     return names[static_cast<uint8_t>(id)];
 }
 
-void heat(float intensity[], uint16_t num_pixels, float magnitude) {
+void heat(float t, float intensity[], uint16_t num_pixels) {
     for (size_t i = 0; i < num_pixels; i++) {
-        intensity[i] = magnitude;
+        intensity[i] = t;
     }
 }
 
-void wipeQuad(float intensity[], uint16_t num_pixels, float magnitude,
-              float blur_width = 0.25f, bool is_reversed = false) {
-    auto sign = 1.0f;
-    if (magnitude < 0.0f) {
-        sign = -1.0f;
-    }
-
-    // blur_width 0--1.0 relative length to pixels length
-    auto a = easing::remap((1.0f - abs(magnitude)), 0.0f, 1.0f,
-                           -1.0f * blur_width, 1.0f);
-
+void wipeQuad(float t, float intensity[], uint16_t num_pixels,
+              float blur_width = 0.25f) {
     for (uint16_t index = 0; index < num_pixels; index++) {
         auto x = static_cast<float>(index) / num_pixels;
-        if (is_reversed) {
-            x = 1.0f - x;
-        }
+        auto tt = t - (x / (1.0f + 2.0f * blur_width));
 
-        intensity[index] = sign * easing::quadInOut(x - a, blur_width);
+        intensity[index] = easing::quadInOut(tt, blur_width);
     }
 }
 
-void pulseQuad(float intensity[], uint16_t num_pixels, float magnitude,
-               float pulse_width = 0.25f, bool is_reversed = false) {
-    auto sign = 1.0f;
-    if (magnitude < 0.0f) {
-        sign = -1.0f;
-    }
+void pulseQuad(float t, float intensity[], uint16_t num_pixels,
+               float pulse_width = 0.25f) {
     // pulse_width 0--1.0 relative length to pixels length
     auto a =
-        easing::remap((1.0f - abs(magnitude)), 0.0f, 1.0f,
-                      -1.0f * 0.5f * pulse_width, 1.0f + 0.5f * pulse_width);
+        easing::remap((1.0f - abs(t)), 0.0f, 1.0f, -1.0f * 0.5f * pulse_width,
+                      1.0f + 0.5f * pulse_width);
+    float v = 1.0f + 3.5f * pulse_width;
 
     for (uint16_t index = 0; index < num_pixels; index++) {
         auto x = static_cast<float>(index) / num_pixels;
-        if (is_reversed) {
-            x = 1.0f - x;
-        }
+        float tt = (t - pulse_width) - x / v;
         intensity[index] =
-            sign *
-            (easing::quadInOut(x + 0.5f * pulse_width - a, 0.5f * pulse_width) -
-             easing::quadInOut(x - 0.5f * pulse_width - a, 0.5f * pulse_width));
+            (easing::quadInOut(tt + 0.5f * pulse_width, 0.5f * pulse_width) -
+             easing::quadInOut(tt - 0.5f * pulse_width, 0.5f * pulse_width));
     }
 }
 
-void waveSaw(float intensity[], uint16_t num_pixels, float magnitude,
-             float wave_width = 1.0f, bool is_reversed = false) {
-    auto a = 1.0f - magnitude;
+void waveSaw(float t, float intensity[], uint16_t num_pixels) {
+    static float v = 1.001f;
 
     for (size_t i = 0; i < num_pixels; i++) {
-        auto x = (static_cast<float>(i) / num_pixels) / (wave_width + 1e-9f);
-        if (is_reversed) {
-            x = 1.0f - x;
-        }
-        intensity[i] = ((x - a) - floorf((x - a) + 0.5f) + 0.5f);
+        auto x = (static_cast<float>(i) / num_pixels);
+
+        intensity[i] = ceilf(t - x / v) - (t - x / v);
     }
 }
 
-void waveSine(float intensity[], uint16_t num_pixels, float magnitude,
-              float wave_width = 1.0f, float is_reversed = false) {
-    auto a = 1.0f - magnitude;
-
+void waveSine(float t, float intensity[], uint16_t num_pixels) {
     for (size_t i = 0; i < num_pixels; i++) {
-        auto x = (static_cast<float>(i) / num_pixels) / (wave_width + 1e-9f);
-        if (is_reversed) {
-            x = 1.0f - x;
-        }
-        intensity[i] = (0.5f * (sinf(2.0f * M_PI * 1.0f * (x - a))) + 0.5f);
+        auto x = (static_cast<float>(i) / num_pixels);
+
+        intensity[i] = (0.5f * (sinf(2.0f * M_PI * 1.0f * (t - x))) + 0.5f);
     }
 }
 
-void setIntensity(float intensity[], uint16_t num_pixels, float magnitude,
-                  IntensityFuncId func_id, float width = 0.25f,
-                  bool is_reversed = false) {
+void setIntensity(float t, float intensity[], uint16_t num_pixels,
+                  IntensityFuncId func_id, bool is_reversed = false) {
+    if (is_reversed) {
+        t = 1.0f - t;
+    }
+
     switch (func_id) {
-        case IntensityFuncId::Heat:
-            shape::heat(intensity, num_pixels, magnitude);
+        case IntensityFuncId::kHeat:
+            shape::heat(t, intensity, num_pixels);
             break;
-        case IntensityFuncId::Wipe:
-            shape::wipeQuad(intensity, num_pixels, magnitude, width,
-                            is_reversed);
+        case IntensityFuncId::kWipe:
+            shape::wipeQuad(t, intensity, num_pixels);
             break;
-        case IntensityFuncId::Pulse:
-            shape::pulseQuad(intensity, num_pixels, magnitude, width,
-                             is_reversed);
+        case IntensityFuncId::kPulse:
+            shape::pulseQuad(t, intensity, num_pixels);
             break;
-        case IntensityFuncId::SineWave:
-            shape::waveSine(intensity, num_pixels, magnitude, width,
-                            is_reversed);
+        case IntensityFuncId::kSineWave:
+            shape::waveSine(t, intensity, num_pixels);
             break;
-        case IntensityFuncId::SawWave:
-            shape::waveSaw(intensity, num_pixels, magnitude, width,
-                           is_reversed);
+        case IntensityFuncId::kSawWave:
+            shape::waveSaw(t, intensity, num_pixels);
             break;
 
         default:

@@ -98,7 +98,7 @@ void setup() {
     BLE.setAdvertisedService(pixel_srv);
     pixel_srv.init(50U, NUM_PIXELS,
                    static_cast<uint8_t>(data_source::DataSource::BeatSin05),
-                   static_cast<uint8_t>(shape::IntensityFuncId::SawWave),
+                   static_cast<uint8_t>(shape::IntensityFuncId::kSawWave),
                    static_cast<uint8_t>(colormap::ColormapId::kHsv));
     tasks::reflectParams(pixel_srv, pixels, false);  // reflect initial values
 
@@ -165,10 +165,9 @@ void setup() {
                  }
 #endif
                  // update intensity
-                 shape::setIntensity(intensity, NUM_PIXELS, magnitude,
+                 shape::setIntensity(magnitude, intensity, NUM_PIXELS,
                                      static_cast<shape::IntensityFuncId>(
                                          pixel_srv.intensity_func_chr.value()),
-                                     pixel_srv.wave_width_chr.valueLE(),
                                      pixel_srv.wave_speed_chr.valueLE() < 0.0f);
                  // set color cache
                  for (size_t i = 0; i < NUM_PIXELS; i++) {
