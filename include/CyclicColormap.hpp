@@ -20,7 +20,7 @@ class SineWaveParam {
           freq_(freq),
           initial_phase_(initial_phase),
           dc_offset_(dc_offset) {}
-    ~SineWaveParam();
+    // ~SineWaveParam();
 
     float amp() { return amp_; }
     float freq() { return freq_; }
@@ -41,7 +41,7 @@ class RgbSineParam {
     RgbSineParam(/* args */);
     RgbSineParam(SineWaveParam r, SineWaveParam g, SineWaveParam b)
         : r_(r), g_(g), b_(b) {}
-    ~RgbSineParam();
+    // ~RgbSineParam();
 
     SineWaveParam* r() { return &r_; }
     SineWaveParam* g() { return &g_; }

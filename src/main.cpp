@@ -99,7 +99,7 @@ void setup() {
     pixel_srv.init(50U, NUM_PIXELS,
                    static_cast<uint8_t>(data_source::DataSource::BeatSin05),
                    static_cast<uint8_t>(shape::IntensityFuncId::SawWave),
-                   static_cast<uint8_t>(colormap::ColormapId::Hsv));
+                   static_cast<uint8_t>(colormap::ColormapId::kHsv));
     tasks::reflectParams(pixel_srv, pixels, false);  // reflect initial values
 
     // add service
