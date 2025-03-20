@@ -4,19 +4,19 @@
 #include <Arduino.h>
 namespace data_source {
 enum class DataSource : unsigned char {
-    BeatSin05,  // sine beat 5Hz
-    BeatSin10,
-    BeatSin20,
-    BeatSaw05,  // saw beat 5Hz
-    BeatSaw10,  // saw beat 1.0Hz
-    BeatSaw20,  // saw beat 2.0Hz
-    AccX,
-    AccY,
-    AccZ,
-    AccMAG,
-    GyroX,
-    GyroY,
-    GyroZ,
+    kBeatSin05,  // sine beat 5Hz
+    kBeatSin10,
+    kBeatSin20,
+    kBeatSaw05,  // saw beat 5Hz
+    kBeatSaw10,  // saw beat 1.0Hz
+    kBeatSaw20,  // saw beat 2.0Hz
+    kAccX,
+    kAccY,
+    kAccZ,
+    kAccMAG,
+    kGyroX,
+    kGyroY,
+    kGyroZ,
     LENGTH
 };
 String input_name(DataSource id) {
@@ -34,27 +34,27 @@ float getSrcValue(DataSource input_src) {
     float magnitude = 0.0f;
     float t = (millis() / 1.0e3f);
     switch (input_src) {
-        case DataSource::BeatSin05:
+        case DataSource::kBeatSin05:
             // 0.5 Hz
             magnitude = 0.5f * sinf(2.0f * M_PI * 0.5f * t) + 0.5f;
             break;
-        case DataSource::BeatSin10:
+        case DataSource::kBeatSin10:
             // 1.0 Hz
             magnitude = 0.5 * sinf(2.0f * M_PI * 1.0f * t) + 0.5f;
             break;
-        case DataSource::BeatSin20:
+        case DataSource::kBeatSin20:
             // 2.0 Hz
             magnitude = 0.5 * sinf(2.0f * M_PI * 2.0f * t) + 0.5f;
             break;
-        case DataSource::BeatSaw05:
+        case DataSource::kBeatSaw05:
             // 0.5 Hz
             magnitude = 0.5f * t - floorf(0.5f * t);
             break;
-        case DataSource::BeatSaw10:
+        case DataSource::kBeatSaw10:
             // 1.0 Hz
             magnitude = t - floorf(t);
             break;
-        case DataSource::BeatSaw20:
+        case DataSource::kBeatSaw20:
             // 0.5 Hz
             magnitude = 2.0f * t - floorf(2.0f * t);
             break;
@@ -67,31 +67,32 @@ float getSrcValue(DataSource input_src) {
 #ifdef LSM6DS3_ENABLED
 float getSrcValue(DataSource input_src, LSM6DS3 &imu) {
     float magnitude = 0.0f;
-    static float max_acc = 1.0f;
+    static float max_acc = 1.5f;
+    static float max_gyro = 180.0f;
     switch (input_src) {
-        case DataSource::AccX:
+        case DataSource::kAccX:
             magnitude = easing::remap(imu.readFloatAccelX(), -max_acc, max_acc,
-                                      -1.0f, 1.0f, true);
+                                      0.0f, 1.0f, true);
             break;
-        case DataSource::AccY:
+        case DataSource::kAccY:
             magnitude = easing::remap(imu.readFloatAccelY(), -max_acc, max_acc,
-                                      -1.0f, 1.0f, true);
+                                      0.0f, 1.0f, true);
             break;
-        case DataSource::AccZ:
+        case DataSource::kAccZ:
             magnitude = easing::remap(imu.readFloatAccelZ(), -max_acc, max_acc,
-                                      -1.0f, 1.0f, true);
+                                      0.0f, 1.0f, true);
             break;
-        case DataSource::GyroX:
-            magnitude = easing::remap(imu.readFloatGyroX(), -180.0f, 180.0f,
-                                      -1.0f, 1.0f, true);
+        case DataSource::kGyroX:
+            magnitude = easing::remap(imu.readFloatGyroX(), -max_gyro, max_gyro,
+                                      0.0f, 1.0f, true);
             break;
-        case DataSource::GyroY:
-            magnitude = easing::remap(imu.readFloatGyroY(), -180.0f, 180.0f,
-                                      -1.0f, 1.0f, true);
+        case DataSource::kGyroY:
+            magnitude = easing::remap(imu.readFloatGyroY(), -max_gyro, max_gyro,
+                                      0.0f, 1.0f, true);
             break;
-        case DataSource::GyroZ:
-            magnitude = easing::remap(imu.readFloatGyroZ(), -180.0f, 180.0f,
-                                      -1.0f, 1.0f, true);
+        case DataSource::kGyroZ:
+            magnitude = easing::remap(imu.readFloatGyroZ(), -max_gyro, max_gyro,
+                                      0.0f, 1.0f, true);
             break;
     }
 
