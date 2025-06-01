@@ -14,6 +14,7 @@
 #ifdef LSM6DS3_ENABLED
 #include "LSM6DS3.h"  // IMU chip
 #endif
+#include <JC_Button.h>
 #include <TaskManager.h>
 #include <Wire.h>
 
@@ -25,12 +26,17 @@
 #include "MyUtils.hpp"
 #include "NeopixelService.hpp"
 
-// NeoPixel variables
+// define pins
 #ifdef ARDUINO_M5Stack_ATOM
 #define PIXEL_PIN 32  // MOSI
+#define BTN_A_PIN 39  // button A
+#define BTN_B_PIN 33  // button B
 #else
 #define PIXEL_PIN 7  // MOSI
+#define BTN_A_PIN 4  // button A
+#define BTN_B_PIN 5  // button B
 #endif
+
 #define REED_PIN 1
 #define NUM_PIXELS 45
 #define DELAY_MS 500
@@ -52,6 +58,13 @@ float magnitude = 0.0f;
 float intensity[NUM_PIXELS];
 color::PixelUnit color_caches[NUM_PIXELS];  // color cache
 Adafruit_NeoPixel pixels(NUM_PIXELS, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+
+// Debounce time 10ms, pullup
+Button button_a(BTN_A_PIN, true, 10);
+Button button_b(BTN_B_PIN, true, 10);
+uint8_t cmap_id = 0;
+uint8_t shape_id = 0;
+uint8_t input_id = 0;
 
 #ifdef LSM6DS3_ENABLED
 // Create a instance of class LSM6DS3
@@ -217,6 +230,8 @@ void setup() {
              })
         ->startFps(30.0);
 #endif
+    button_a.begin();
+    button_b.begin();
 
 }  // end of setup
 
@@ -225,6 +240,39 @@ void loop() {
     clock_sec = milli_sec * 1.0e-3f;
     pixel_srv.timer_chr.writeValue(milli_sec);
     Tasks.update();  // automatically execute tasks
-    delay(1);
+
+    // TODO : add a task to update the button state
+    button_a.read();
+    button_b.read();
+    if (button_a.wasPressed()) {
+        // button pressed
+        cmap_id += 1;
+        if (cmap_id >= static_cast<uint8_t>(colormap::ColormapId::LENGTH)) {
+            cmap_id = 0;
+        }
+        pixel_srv.colormap_chr.writeValue(cmap_id);
+    }
+
+    if (button_b.wasPressed()) {
+        // button pressed
+        shape_id += 1;
+        if (shape_id >= static_cast<uint8_t>(shape::IntensityFuncId::LENGTH)) {
+            // reset to 0
+            shape_id = 0;
+        }
+        pixel_srv.intensity_func_chr.writeValue(shape_id);
+    }
+
+    if (button_a.wasPressed() && button_b.wasPressed()) {
+        // button pressed
+        input_id += 1;
+        if (input_id >= static_cast<uint8_t>(data_source::DataSource::LENGTH)) {
+            // reset to 0
+            input_id = 0;
+        }
+        pixel_srv.input_chr.writeValue(input_id);
+    }
+
+    delay(10);
     loop_count++;
 }
