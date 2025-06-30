@@ -28,7 +28,10 @@
 // NeoPixel variables
 #ifdef ARDUINO_M5Stack_ATOM
 #define PIXEL_PIN 32  // MOSI
+#elif defined(ARDUINO_M5Stack_StampS3)
+#define PIXEL_PIN 15
 #else
+// user defined pin
 #define PIXEL_PIN 7  // MOSI
 #endif
 #define NUM_PIXELS 45
